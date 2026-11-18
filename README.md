@@ -4,6 +4,19 @@
 
 小程序端覆盖商品浏览、多店比价、球杆推荐、皮头更换、球杆定制、社区交流与下单流程；后台提供商品、订单、帖子、用户、敏感词与数据统计等管理能力。
 
+## 界面预览
+
+<p align="center">
+  <img src="docs/images/login.png" width="23%" alt="登录" />
+  <img src="docs/images/product-list.png" width="23%" alt="商品列表" />
+  <img src="docs/images/product-detail.png" width="23%" alt="商品详情" />
+  <img src="docs/images/post-detail.png" width="23%" alt="帖子详情" />
+</p>
+
+<p align="center">
+  <img src="docs/images/admin-login.jpg" width="72%" alt="管理后台登录" />
+</p>
+
 ## 功能特性
 
 **小程序端（20 个页面）**
@@ -67,6 +80,8 @@ wechaminiPrograme
     ├── utils/image.js              # 图片地址补全与中文路径编码
     └── project.config.json         # 开发者工具项目配置
 ```
+
+界面截图存放在 `docs/images/`，即上方预览图。
 
 ## 快速开始
 
