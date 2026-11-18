@@ -58,7 +58,7 @@ wechaminiPrograme
 │   │   ├── static/billiard_img/    # 商品图库（未随仓库提供，见下文）
 │   │   ├── mapper/                 # 复杂查询 XML
 │   │   └── application.yml         # 端口 / 数据库 / Redis / 图片地址
-│   ├── uploads/                    # 运行时上传目录（头像、帖子图、商品图）
+│   ├── uploads/                    # 运行时上传目录（不入库，首次运行自动创建）
 │   ├── billiard_db.sql             # 建库建表 + 演示数据
 │   └── pom.xml
 └── frontend/                       # 微信小程序
@@ -143,7 +143,7 @@ mvn spring-boot:run
 
 `backend/src/main/resources/static/billiard_img/` 是约 360MB 的演示商品图片，**未包含在本仓库中**（体积原因）。缺少图片时商品显示占位图，功能不受影响。如需完整效果，把原来那份 `billiard_img` 目录放回该路径即可（该目录已在 `.gitignore` 中忽略）。
 
-`backend/uploads/` 是运行时上传目录（用户头像、帖子配图、商品图），已随仓库提供一份演示数据。
+`backend/uploads/` 是运行时上传目录（用户头像、帖子配图、商品图），属于运行时数据，**不随仓库提供**，首次上传时会自动创建。
 
 ## 常见问题
 

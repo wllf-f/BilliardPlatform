@@ -21,6 +21,10 @@ frontend/project.private.config.json
 # 约 360MB 商品图片，未随仓库提供；按 README 说明放回该目录即可正常显示
 backend/src/main/resources/static/billiard_img/
 
+# ---------- 运行时上传目录 ----------
+# 用户上传的头像 / 帖子图，属于运行时数据，不入库
+backend/uploads/
+
 # ---------- 系统文件 ----------
 Thumbs.db
 .DS_Store
