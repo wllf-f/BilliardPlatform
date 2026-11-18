@@ -1,0 +1,88 @@
+<view class="product-list-page">
+  <!-- 搜索栏 -->
+  <view class="search-bar">
+    <input class="search-input" placeholder="搜索商品" value="{{keyword}}" bindinput="onSearchInput" bindconfirm="doSearch" confirm-type="search" />
+    <view class="search-btn theme-color" bindtap="doSearch">搜索</view>
+  </view>
+
+  <!-- 筛选条 -->
+  <view class="filter-bar">
+    <view class="filter-item {{sort === '' ? 'active' : ''}}" bindtap="changeSort" data-sort="">综合</view>
+    <view class="filter-item {{sort === 'sales-desc' ? 'active' : ''}}" bindtap="changeSort" data-sort="sales-desc">销量</view>
+    <view class="filter-item {{sort === 'price-asc' ? 'active' : ''}}" bindtap="changeSort" data-sort="price-asc">价格↑</view>
+    <view class="filter-item {{sort === 'price-desc' ? 'active' : ''}}" bindtap="changeSort" data-sort="price-desc">价格↓</view>
+    <view class="filter-item filter-more" bindtap="showFilter">筛选</view>
+  </view>
+
+  <!-- 商品列表 -->
+  <view class="list">
+    <view class="product-card {{selectMode ? 'card-select' : ''}}" wx:for="{{list}}" wx:key="id">
+      <!-- 卡片主体：点击进入详情 -->
+      <view class="card-body" bindtap="goDetail" data-id="{{item.id}}">
+        <image class="product-img" src="{{item.mainImg}}" mode="aspectFill" lazy-load="true"></image>
+        <view class="product-info">
+          <view class="product-name ellipsis-2">{{item.name}}</view>
+          <view class="product-tags">
+            <text wx:if="{{item.cueType}}" class="tag tag-green">{{item.cueType}}</text>
+            <text wx:if="{{item.hardness}}" class="tag tag-orange">{{item.hardness}}</text>
+          </view>
+          <view class="product-brand">{{item.categoryName}} · {{item.brandName}}</view>
+          <view class="price-row">
+            <view class="price-box">
+              <text class="price"><text class="price-symbol">¥</text>{{item.platformPrice}}</text>
+              <text class="official-price">官方¥{{item.officialPrice}}</text>
+            </view>
+            <text class="sales-text">已售{{item.sales}}</text>
+          </view>
+        </view>
+      </view>
+      <!-- 选择模式：右侧选择按钮 -->
+      <view wx:if="{{selectMode}}" class="select-btn-wrap" catchtap="selectProduct" data-id="{{item.id}}">选择</view>
+    </view>
+  </view>
+
+  <view wx:if="{{!loading && list.length === 0}}" class="empty-box">
+    <view class="empty-text">暂无相关商品</view>
+  </view>
+
+  <view wx:if="{{loading}}" class="loading-more">加载中...</view>
+  <view wx:if="{{!loading && list.length > 0 && noMore}}" class="no-more">— 没有更多了 —</view>
+
+  <!-- 筛选弹窗 -->
+  <view wx:if="{{filterVisible}}" class="mask" bindtap="hideFilter">
+    <view class="filter-panel" catchtap="stopTap">
+      <view class="filter-title">筛选条件</view>
+      <view class="filter-group">
+        <view class="filter-label">球杆类型</view>
+        <view class="filter-opts">
+          <view class="opt {{cueType === '' ? 'active' : ''}}" bindtap="setCueType" data-val="">全部</view>
+          <view class="opt {{cueType === '大头杆' ? 'active' : ''}}" bindtap="setCueType" data-val="大头杆">大头杆</view>
+          <view class="opt {{cueType === '小头杆' ? 'active' : ''}}" bindtap="setCueType" data-val="小头杆">小头杆</view>
+          <view class="opt {{cueType === '通杆' ? 'active' : ''}}" bindtap="setCueType" data-val="通杆">通杆</view>
+        </view>
+      </view>
+      <view class="filter-group">
+        <view class="filter-label">硬度</view>
+        <view class="filter-opts">
+          <view class="opt {{hardness === '' ? 'active' : ''}}" bindtap="setHardness" data-val="">全部</view>
+          <view class="opt {{hardness === '偏软' ? 'active' : ''}}" bindtap="setHardness" data-val="偏软">偏软</view>
+          <view class="opt {{hardness === '适中' ? 'active' : ''}}" bindtap="setHardness" data-val="适中">适中</view>
+          <view class="opt {{hardness === '偏硬' ? 'active' : ''}}" bindtap="setHardness" data-val="偏硬">偏硬</view>
+          <view class="opt {{hardness === '硬' ? 'active' : ''}}" bindtap="setHardness" data-val="硬">硬</view>
+        </view>
+      </view>
+      <view class="filter-group">
+        <view class="filter-label">价格区间</view>
+        <view class="price-inputs">
+          <input class="price-input" type="number" placeholder="最低价" value="{{minPrice}}" bindinput="onMinPrice" />
+          <text class="price-line">-</text>
+          <input class="price-input" type="number" placeholder="最高价" value="{{maxPrice}}" bindinput="onMaxPrice" />
+        </view>
+      </view>
+      <view class="filter-btns">
+        <view class="filter-btn reset" bindtap="resetFilter">重置</view>
+        <view class="filter-btn confirm" bindtap="confirmFilter">确定</view>
+      </view>
+    </view>
+  </view>
+</view>

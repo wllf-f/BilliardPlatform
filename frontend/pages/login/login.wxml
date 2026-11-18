@@ -1,0 +1,33 @@
+<view class="login-page">
+  <view class="logo-box">
+    <view class="logo-icon">🎱</view>
+    <view class="logo-title">台球器材优选</view>
+    <view class="logo-sub">专业台球器材电商平台</view>
+  </view>
+
+  <view class="form-box card">
+    <view class="tabs">
+      <view class="tab {{mode === 'login' ? 'active' : ''}}" bindtap="switchTab" data-mode="login">登录</view>
+      <view class="tab {{mode === 'register' ? 'active' : ''}}" bindtap="switchTab" data-mode="register">注册</view>
+    </view>
+
+    <view class="input-row">
+      <text class="label">用户名</text>
+      <input class="input" placeholder="请输入用户名" value="{{username}}" bindinput="onInput" data-field="username" />
+    </view>
+    <view class="input-row">
+      <text class="label">密码</text>
+      <input class="input" placeholder="请输入密码" password="true" value="{{password}}" bindinput="onInput" data-field="password" />
+    </view>
+
+    <view class="btn-primary" bindtap="submit">{{mode === 'login' ? '登录' : '注册'}}</view>
+
+    <view class="divider"></view>
+
+    <button class="wx-login-btn" open-type="getUserInfo" bindtap="wxLogin">
+      <text class="wx-icon">💬</text> 微信一键登录
+    </button>
+  </view>
+
+  <view class="footer-tip">登录即代表同意《用户协议》和《隐私政策》</view>
+</view>

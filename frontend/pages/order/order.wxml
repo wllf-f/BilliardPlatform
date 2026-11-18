@@ -1,0 +1,81 @@
+<view class="order-page" wx:if="{{product}}">
+  <!-- 收货地址 -->
+  <view class="card addr-card" bindtap="selectAddress">
+    <block wx:if="{{address}}">
+      <view class="addr-info">
+        <view class="addr-name">
+          <text class="addr-consignee">{{address.consignee}}</text>
+          <text class="addr-phone">{{address.phone}}</text>
+        </view>
+        <view class="addr-detail">{{address.province}}{{address.city}}{{address.district}} {{address.detail}}</view>
+      </view>
+    </block>
+    <view wx:else class="addr-empty">
+      <text class="addr-empty-text">请选择收货地址</text>
+    </view>
+    <text class="addr-arrow">></text>
+  </view>
+
+  <!-- 商品信息 -->
+  <view class="card">
+    <view class="product-row">
+      <image class="product-img" src="{{product.mainImg}}" mode="aspectFill"></image>
+      <view class="product-info">
+        <view class="product-name ellipsis-2">{{product.name}}</view>
+        <view class="product-tags">
+          <text wx:if="{{product.cueType}}" class="tag tag-green">{{product.cueType}}</text>
+          <text wx:if="{{product.hardness}}" class="tag tag-orange">{{product.hardness}}</text>
+        </view>
+        <view class="price-line">
+          <text class="price"><text class="price-symbol">¥</text>{{product.platformPrice}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="quantity-row">
+      <text class="quantity-label">购买数量</text>
+      <view class="quantity-control">
+        <view class="qty-btn" bindtap="minusQty">-</view>
+        <view class="qty-num">{{quantity}}</view>
+        <view class="qty-btn" bindtap="plusQty">+</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 备注 -->
+  <view class="card">
+    <view class="remark-row">
+      <text class="remark-label">订单备注</text>
+      <input class="remark-input" placeholder="选填，给商家留言" value="{{remark}}" bindinput="onRemarkInput" />
+    </view>
+  </view>
+
+  <!-- 价格汇总 -->
+  <view class="card">
+    <view class="summary-row">
+      <text>商品金额</text>
+      <text class="price">¥{{totalAmount}}</text>
+    </view>
+    <view class="summary-row">
+      <text>实付款</text>
+      <text class="price total-price"><text class="price-symbol">¥</text>{{totalAmount}}</text>
+    </view>
+  </view>
+
+  <view style="height: 140rpx;"></view>
+
+  <!-- 底部提交 -->
+  <view class="bottom-bar">
+    <view class="bar-total">
+      <text>合计：</text>
+      <text class="price"><text class="price-symbol">¥</text>{{totalAmount}}</text>
+    </view>
+    <view class="bar-submit" bindtap="submitOrder">提交订单</view>
+  </view>
+</view>
+
+<view wx:if="{{!product && !loading}}" class="empty-box">
+  <view class="empty-text">商品信息加载中...</view>
+</view>
+
+<view wx:if="{{loading}}" class="loading-more">加载中...</view>

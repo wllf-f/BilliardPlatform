@@ -1,0 +1,21 @@
+<view class="collection-page">
+  <view class="list">
+    <view class="collect-card" wx:for="{{list}}" wx:key="collectId" bindtap="goDetail" data-id="{{item.productId}}">
+      <image class="collect-img" src="{{item.mainImg}}" mode="aspectFill" lazy-load="true"></image>
+      <view class="collect-info">
+        <view class="collect-name ellipsis-2">{{item.name}}</view>
+        <view class="collect-bottom">
+          <text class="price"><text class="price-symbol">¥</text>{{item.platformPrice}}</text>
+          <view class="cancel-btn" catchtap="cancelCollect" data-id="{{item.productId}}" data-index="{{index}}">取消收藏</view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{!loading && list.length === 0}}" class="empty-box">
+    <view class="empty-text">暂无收藏商品</view>
+  </view>
+
+  <view wx:if="{{loading}}" class="loading-more">加载中...</view>
+  <view wx:if="{{!loading && list.length > 0 && noMore}}" class="no-more">— 没有更多了 —</view>
+</view>

@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>订单管理</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css">
+  <link rel="stylesheet" href="../css/style.css?v=6">
+</head>
+<body>
+  <div class="page-wrap">
+    <div class="page-header">
+      <h4><i class="fa fa-file-text-o text-accent"></i> 订单管理</h4>
+      <div class="d-flex gap-2">
+        <button class="btn btn-sm btn-outline-secondary" onclick="cancelTimeoutOrders()"><i class="fa fa-clock-o"></i> 清理超时未付款</button>
+        <button class="btn btn-sm btn-outline-accent" onclick="exportCSV()"><i class="fa fa-download"></i> 导出CSV</button>
+      </div>
+    </div>
+
+    <div class="filter-bar">
+      <input type="text" class="form-control" id="fOrderNo" placeholder="订单编号搜索" style="min-width:200px;">
+      <select class="form-select" id="fType">
+        <option value="">全部类型</option>
+        <option value="1">普通订单</option>
+        <option value="2">定制订单</option>
+        <option value="3">改装订单</option>
+      </select>
+      <select class="form-select" id="fStatus">
+        <option value="">全部状态</option>
+        <option value="0">未付款</option>
+        <option value="1">待发货</option>
+        <option value="2">待收货</option>
+        <option value="3">已完成</option>
+        <option value="4">已取消</option>
+      </select>
+      <button class="btn btn-sm btn-accent" onclick="loadList(1)"><i class="fa fa-search"></i> 查询</button>
+      <button class="btn btn-sm btn-outline-secondary" onclick="resetFilter()"><i class="fa fa-refresh"></i> 重置</button>
+    </div>
+
+    <div class="table-card">
+      <table class="table table-hover align-middle">
+        <thead>
+          <tr>
+            <th style="width:60px;">ID</th>
+            <th>订单编号</th>
+            <th>类型</th>
+            <th>用户</th>
+            <th style="width:280px;">商品信息</th>
+            <th>收货人</th>
+            <th>总金额</th>
+            <th>状态</th>
+            <th>下单时间</th>
+            <th style="width:260px;">操作</th>
+          </tr>
+        </thead>
+        <tbody id="dataBody">
+          <tr><td colspan="10" class="loading"><i class="fa fa-spinner fa-spin"></i> 加载中...</td></tr>
+        </tbody>
+      </table>
+      <div class="pager" id="pager"></div>
+    </div>
+  </div>
+
+  <!-- 订单详情 -->
+  <div class="modal fade" id="detailModal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">订单详情</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body" id="detailBody"></div>
+        <div class="modal-footer" id="detailFooter">
+          <button class="btn btn-outline-secondary" data-bs-dismiss="modal">关闭</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 发货弹框 -->
+  <div class="modal fade" id="shipModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="fa fa-truck text-accent"></i> 订单发货</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label required">快递公司</label>
+            <select class="form-select" id="shipCompany">
+              <option value="顺丰速运">顺丰速运</option>
+              <option value="京东物流">京东物流</option>
+              <option value="圆通速递">圆通速递</option>
+              <option value="中通快递">中通快递</option>
+              <option value="申通快递">申通快递</option>
+              <option value="韵达快递">韵达快递</option>
+              <option value="百世快递">百世快递</option>
+              <option value="邮政EMS">邮政EMS</option>
+              <option value="其他">其他</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label required">快递单号</label>
+            <input type="text" class="form-control" id="shipNo" placeholder="请输入快递单号">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" data-bs-dismiss="modal">取消</button>
+          <button class="btn btn-accent" onclick="confirmShip()"><i class="fa fa-check"></i> 确认发货</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.0/dist/jquery.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="../js/common.js?v=12"></script>
+  <script>
+    // 进入页面时校验登录态，未登录跳转到登录页
+    if (!localStorage.getItem('adminToken')) {
+      location.href = '../login.html';
+    }
+  </script>
+  <script>
+    var G = { page: 1, size: 10, total: 0, currentId: null, currentRows: [], currentShipId: null, countdownTimer: null };
+
+    var TYPE_MAP = { 1: '普通订单', 2: '定制订单', 3: '改装订单' };
+    var TYPE_BADGE = { 1: 'primary', 2: 'info', 3: 'warning' };
+    var STATUS_MAP = { 0: '未付款', 1: '待发货', 2: '待收货', 3: '已完成', 4: '已取消' };
+    var STATUS_BADGE = { 0: 'secondary', 1: 'warning', 2: 'info', 3: 'success', 4: 'danger' };
+    // 超时配置（分钟）：与后端 Constants 保持一致
+    var PAY_TIMEOUT_MINUTES = 15;
+    var RECEIVE_TIMEOUT_MINUTES = 10080;
+
+    /**
+     * 计算倒计时文本
+     * @param {string} startTimeStr 起始时间字符串（yyyy-MM-dd HH:mm:ss）
+     * @param {number} timeoutMinutes 超时时长（分钟）
+     * @returns {string} 如 "2天3时15分0秒" 或 "15分0秒" 或 "已超时"
+     */
+    function calcCountdown(startTimeStr, timeoutMinutes) {
+      if (!startTimeStr) return '';
+      var start = new Date(String(startTimeStr).replace(/-/g, '/'));
+      if (isNaN(start.getTime())) return '';
+      var deadline = new Date(start.getTime() + timeoutMinutes * 60 * 1000);
+      var diff = deadline - new Date();
+      if (diff <= 0) return '已超时';
+      var days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      var hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      var minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      var seconds = Math.floor((diff % (1000 * 60)) / 1000);
+      if (days > 0) return days + '天' + hours + '时' + minutes + '分' + seconds + '秒';
+      if (hours > 0) return hours + '时' + minutes + '分' + seconds + '秒';
+      if (minutes > 0) return minutes + '分' + seconds + '秒';
+      return seconds + '秒';
+    }
+
+    /** 启动列表倒计时定时器，每秒刷新所有订单的倒计时显示 */
+    function startListCountdown() {
+      if (G.countdownTimer) clearInterval(G.countdownTimer);
+      G.countdownTimer = setInterval(function () {
+        G.currentRows.forEach(function (o) {
+          var payEl = document.getElementById('pay-countdown-' + o.id);
+          if (payEl && o.status === 0 && o.createTime) {
+            payEl.innerText = calcCountdown(o.createTime, o.payTimeoutMinutes || PAY_TIMEOUT_MINUTES);
+          }
+          var recvEl = document.getElementById('recv-countdown-' + o.id);
+          if (recvEl && o.status === 2 && o.shipTime) {
+            recvEl.innerText = calcCountdown(o.shipTime, o.receiveTimeoutMinutes || RECEIVE_TIMEOUT_MINUTES);
+          }
+        });
+      }, 1000);
+    }
+
+    function buildQuery() {
+      return {
+        page: G.page, size: G.size,
+        orderType: $('#fType').val() || '',
+        status: $('#fStatus').val() || '',
+        orderNo: $.trim($('#fOrderNo').val())
+      };
+    }
+
+    function loadList(page) {
+      G.page = page || 1;
+      $('#dataBody').html('<tr><td colspan="9" class="loading"><i class="fa fa-spinner fa-spin"></i> 加载中...</td></tr>');
+      ajax('/admin/order/list', 'GET', buildQuery(), function (res) {
+        G.total = res.total || 0;
+        G.currentRows = res.records || [];
+        var h = '';
+        if (!G.currentRows.length) {
+          h = '<tr><td colspan="9" class="empty-tip"><i class="fa fa-inbox"></i> 暂无订单数据</td></tr>';
+        } else {
+          G.currentRows.forEach(function (o) {
+            // 渲染商品信息：图片 + 名称 + 数量
+            var itemsHtml = '';
+            if (o.items && o.items.length) {
+              o.items.forEach(function (it) {
+                var imgSrc = productImg(it.imgUrl);
+                itemsHtml += '<div class="order-item-info">' +
+                  '<img class="thumb thumb-xs" src="' + imgSrc + '" onerror="this.onerror=null;this.src=\'' + DEFAULT_PRODUCT_IMG + '\';" style="margin-right:6px;">' +
+                  '<span title="' + esc(it.productName || '') + '">' + esc(it.productName || '') + '</span>' +
+                  ' <span class="muted">×' + (it.quantity || 1) + '</span>' +
+                '</div>';
+              });
+            } else {
+              itemsHtml = '<span class="muted">-</span>';
+            }
+
+            // 按状态渲染操作按钮
+            var opHtml = '';
+            var st = o.status;
+            opHtml += '<button class="btn btn-sm btn-outline-accent" onclick="openDetail(' + o.id + ')">详情</button>';
+            if (st === 1) { // 待发货
+              opHtml += ' <button class="btn btn-sm btn-accent" onclick="openShip(' + o.id + ')">发货</button>';
+            }
+            if (st === 2) { // 待收货 → 可强制完成
+              opHtml += ' <button class="btn btn-sm btn-success" onclick="markCompleted(' + o.id + ')">完成</button>';
+            }
+            if (st === 0 || st === 1) { // 未付款/待发货 可取消
+              opHtml += ' <button class="btn btn-sm btn-outline-danger" onclick="cancelOrder(' + o.id + ')">取消</button>';
+            }
+
+            // 状态列：徽章 + 倒计时
+            var statusHtml = '<span class="badge bg-' + (STATUS_BADGE[st] || 'secondary') + '">' + (STATUS_MAP[st] || '-') + '</span>';
+            if (st === 0 && o.createTime) {
+              var payCd = calcCountdown(o.createTime, o.payTimeoutMinutes || PAY_TIMEOUT_MINUTES);
+              statusHtml += '<div class="muted fs-12 mt-1" title="超时自动取消">⏰ <span id="pay-countdown-' + o.id + '">' + payCd + '</span></div>';
+            }
+            if (st === 2 && o.shipTime) {
+              var recvCd = calcCountdown(o.shipTime, o.receiveTimeoutMinutes || RECEIVE_TIMEOUT_MINUTES);
+              statusHtml += '<div class="muted fs-12 mt-1" title="超时自动收货">📦 <span id="recv-countdown-' + o.id + '">' + recvCd + '</span></div>';
+            }
+
+            h += '<tr>' +
+              '<td>' + o.id + '</td>' +
+              '<td class="fs-13" style="word-break:break-all;max-width:160px;">' + esc(o.orderNo || '') + '</td>' +
+              '<td><span class="badge bg-' + (TYPE_BADGE[o.orderType] || 'secondary') + '">' + (TYPE_MAP[o.orderType] || '-') + '</span></td>' +
+              '<td class="fs-13">' + esc(o.nickname || o.username || '-') + '<div class="muted fs-13">ID:' + (o.userId || '-') + '</div></td>' +
+              '<td class="fs-13">' + itemsHtml + '</td>' +
+              '<td>' + esc(o.consignee || '-') + '<div class="muted fs-13">' + esc(o.phone || '') + '</div></td>' +
+              '<td>¥' + fmtMoney(o.totalAmount) + '</td>' +
+              '<td>' + statusHtml + '</td>' +
+              '<td class="fs-13">' + fmtTime(o.createTime) + '</td>' +
+              '<td class="nowrap">' + opHtml + '</td>' +
+            '</tr>';
+          });
+        }
+        $('#dataBody').html(h);
+        renderPager('#pager', G.page, G.size, G.total, function (p) { loadList(p); });
+        // 列表渲染完成后启动倒计时定时器
+        startListCountdown();
+      });
+    }
+
+    function resetFilter() {
+      $('#fOrderNo').val(''); $('#fType').val(''); $('#fStatus').val('');
+      loadList(1);
+    }
+
+    function openDetail(id) {
+      G.currentId = id;
+      ajax('/admin/order/detail/' + id, 'GET', null, function (o) {
+        var itemsHtml = '';
+        (o.items || []).forEach(function (it) {
+          var imgSrc = productImg(it.imgUrl);
+          itemsHtml += '<tr>' +
+            '<td><img class="thumb thumb-sm" src="' + imgSrc + '" onerror="this.onerror=null;this.src=\'' + DEFAULT_PRODUCT_IMG + '\'"></td>' +
+            '<td>' + esc(it.productName || '') + '</td>' +
+            '<td>¥' + fmtMoney(it.price) + '</td>' +
+            '<td>' + (it.quantity || 1) + '</td>' +
+            '<td>¥' + fmtMoney(it.subtotal) + '</td></tr>';
+        });
+        if (!itemsHtml) itemsHtml = '<tr><td colspan="5" class="muted text-center">无商品明细</td></tr>';
+
+        var customHtml = '';
+        if (o.orderType == 2 && o.customForm) {
+          var cf = o.customForm;
+          var CUSTOM_LABELS = {
+            playType: '打球类型', powerStyle: '发力方式', techPref: '技术偏好',
+            feelChoice: '手感偏好', feelDesc: '手感描述', oldCue: '原用球杆',
+            cueStructure: '球杆结构', totalLength: '总长(cm)', totalWeight: '总重(oz)',
+            balancePoint: '平衡点', frontJointModel: '前节型号',
+            tipDiameter: '杆头直径(mm)', gripDiameter: '握把直径(mm)',
+            taperReq: '锥度要求', tipMaterial: '皮头材质', tipSpec: '皮头规格',
+            baseWood: '底木材质', gripType: '握把类型',
+            insertPlan: '镶嵌方案', inlayConfig: '镶嵌配置', lacquerReq: '油漆要求',
+            decorRemark: '装饰备注', grainClause: '木纹条款',
+            photoReq: '照片要求', woodShip: '木材发货', noReturn: '不退换说明',
+            paramAdjust: '参数调整', otherRemark: '其他备注'
+          };
+          var SKIP_FIELDS = { id: 1, orderId: 1 };
+          var sections = [
+            { title: '打球习惯', fields: ['playType','powerStyle','techPref','feelChoice','feelDesc','oldCue'] },
+            { title: '物理参数', fields: ['cueStructure','totalLength','totalWeight','balancePoint','frontJointModel','tipDiameter','gripDiameter','taperReq','tipMaterial','tipSpec','baseWood','gripType'] },
+            { title: '外观工艺', fields: ['insertPlan','inlayConfig','lacquerReq','decorRemark','grainClause'] }
+          ];
+          customHtml = '<div class="card card-body bg-light mb-3"><h6 class="fw-bold">定制需求</h6>';
+          sections.forEach(function (sec) {
+            var rowHtml = '';
+            sec.fields.forEach(function (f) {
+              var val = cf[f];
+              if (val && val !== '' && !SKIP_FIELDS[f]) {
+                rowHtml += '<div class="col-md-6"><span class="muted">' + esc(CUSTOM_LABELS[f] || f) + '：</span>' + esc(val) + '</div>';
+              }
+            });
+            if (rowHtml) {
+              customHtml += '<div class="mb-2"><strong class="fs-13 text-secondary">' + sec.title + '</strong></div>' +
+                '<div class="row fs-13 mb-3">' + rowHtml + '</div>';
+            }
+          });
+          var otherHtml = '';
+          for (var k in cf) {
+            if (!SKIP_FIELDS[k] && cf[k] && cf[k] !== '') {
+              var inSection = false;
+              sections.forEach(function (sec) { if (sec.fields.indexOf(k) >= 0) inSection = true; });
+              if (!inSection) {
+                otherHtml += '<div class="col-md-6"><span class="muted">' + esc(CUSTOM_LABELS[k] || k) + '：</span>' + esc(cf[k]) + '</div>';
+              }
+            }
+          }
+          if (otherHtml) customHtml += '<div class="row fs-13">' + otherHtml + '</div>';
+          customHtml += '</div>';
+        }
+
+        // 改装订单：显示改装部地址
+        var modifyHtml = '';
+        if (o.orderType == 3 && o.modifyAddress) {
+          var m = o.modifyAddress;
+          modifyHtml = '<div class="card card-body bg-warning-subtle mb-3 fs-13">' +
+            '<h6 class="fw-bold"><i class="fa fa-map-marker text-warning"></i> 改装部地址（用户需寄送到此）</h6>' +
+            '<div><span class="muted">收件人：</span>' + esc(m.name || '-') + '</div>' +
+            '<div><span class="muted">联系电话：</span>' + esc(m.phone || '-') + '</div>' +
+            '<div><span class="muted">地址：</span>' + esc(m.address || '-') + '</div>' +
+          '</div>';
+        }
+
+        // 物流信息
+        var expressHtml = '';
+        if (o.expressCompany || o.expressNo) {
+          expressHtml = '<div class="card card-body bg-info-subtle mb-3 fs-13">' +
+            '<h6 class="fw-bold"><i class="fa fa-truck text-info"></i> 物流信息</h6>' +
+            '<div><span class="muted">快递公司：</span>' + esc(o.expressCompany || '-') + '</div>' +
+            '<div><span class="muted">快递单号：</span><code>' + esc(o.expressNo || '-') + '</code></div>' +
+          '</div>';
+        }
+
+        var html = '' +
+          '<div class="row mb-3 fs-13">' +
+            '<div class="col-md-6"><span class="muted">订单编号：</span>' + esc(o.orderNo || '') + '</div>' +
+            '<div class="col-md-6"><span class="muted">订单类型：</span><span class="badge bg-' + (TYPE_BADGE[o.orderType] || 'secondary') + '">' + (TYPE_MAP[o.orderType] || '-') + '</span></div>' +
+            '<div class="col-md-6"><span class="muted">用户ID：</span>' + (o.userId || '-') + '</div>' +
+            '<div class="col-md-6"><span class="muted">用户昵称：</span>' + esc(o.nickname || o.username || '-') + '</div>' +
+            '<div class="col-md-6"><span class="muted">订单状态：</span><span class="badge bg-' + (STATUS_BADGE[o.status] || 'secondary') + '">' + (STATUS_MAP[o.status] || '-') + '</span></div>' +
+            '<div class="col-md-6"><span class="muted">下单时间：</span>' + fmtTime(o.createTime) + '</div>' +
+            '<div class="col-md-6"><span class="muted">付款时间：</span>' + fmtTime(o.payTime) + '</div>' +
+            '<div class="col-md-6"><span class="muted">发货时间：</span>' + fmtTime(o.shipTime) + '</div>' +
+            '<div class="col-md-6"><span class="muted">完成时间：</span>' + fmtTime(o.completeTime) + '</div>' +
+            '<div class="col-md-6"><span class="muted">总金额：</span><b class="text-danger">¥' + fmtMoney(o.totalAmount) + '</b></div>' +
+          '</div>' +
+          '<div class="card card-body bg-light mb-3 fs-13">' +
+            '<h6 class="fw-bold">收货信息</h6>' +
+            '<div><span class="muted">收货人：</span>' + esc(o.consignee || '-') + '</div>' +
+            '<div><span class="muted">手机号：</span>' + esc(o.phone || '-') + '</div>' +
+            '<div><span class="muted">地址：</span>' + esc(o.address || '-') + '</div>' +
+            (o.remark ? '<div><span class="muted">备注：</span>' + esc(o.remark) + '</div>' : '') +
+          '</div>' +
+          modifyHtml +
+          expressHtml +
+          customHtml +
+          '<h6 class="fw-bold">商品明细</h6>' +
+          '<table class="table table-sm table-bordered align-middle">' +
+            '<thead><tr><th style="width:50px;">图</th><th>商品</th><th>单价</th><th>数量</th><th>小计</th></tr></thead>' +
+            '<tbody>' + itemsHtml + '</tbody>' +
+          '</table>';
+
+        $('#detailBody').html(html);
+
+        // 底部操作按钮（按状态）
+        var st = o.status;
+        var footer = '<button class="btn btn-outline-secondary" data-bs-dismiss="modal">关闭</button>';
+        if (st === 1) { // 待发货
+          footer = '<button class="btn btn-accent" onclick="openShip(' + o.id + ')"><i class="fa fa-truck"></i> 发货</button>' +
+                   '<button class="btn btn-outline-danger" onclick="cancelOrder(' + o.id + ')"><i class="fa fa-times"></i> 取消订单</button>' + footer;
+        } else if (st === 2) { // 待收货
+          footer = '<button class="btn btn-success" onclick="markCompleted(' + o.id + ')"><i class="fa fa-check"></i> 标记已完成</button>' + footer;
+        } else if (st === 0) { // 未付款
+          footer = '<button class="btn btn-outline-danger" onclick="cancelOrder(' + o.id + ')"><i class="fa fa-times"></i> 取消订单</button>' + footer;
+        } else if ((st === 1 || st === 2) && o.expressNo) { // 已发货/待收货 → 可修改物流
+          footer = '<button class="btn btn-outline-accent" onclick="openShip(' + o.id + ', true)"><i class="fa fa-pencil"></i> 修改物流</button>' + footer;
+        }
+        $('#detailFooter').html(footer);
+
+        new bootstrap.Modal('#detailModal').show();
+      });
+    }
+
+    // 更新状态（通用）
+    function updateStatus(id, status, tip) {
+      if (!confirm(tip || '确认更新该订单状态？')) return;
+      ajax('/admin/order/status', 'POST', { id: id, status: parseInt(status) }, function () {
+        alert('操作成功');
+        bootstrap.Modal.getInstance(document.getElementById('detailModal'))?.hide();
+        loadList(G.page);
+      });
+    }
+
+    function cancelOrder(id) {
+      updateStatus(id, 4, '确认取消该订单？该操作不可恢复！');
+    }
+
+    function markCompleted(id) {
+      updateStatus(id, 3, '确认标记该订单为已完成？');
+    }
+
+    // 打开发货弹框
+    function openShip(id, isEdit) {
+      G.currentShipId = id;
+      $('#shipNo').val('');
+      if (isEdit) {
+        // 编辑模式：回填现有物流信息
+        var row = G.currentRows.find(function (r) { return r.id == id; });
+        if (row && row.expressCompany) $('#shipCompany').val(row.expressCompany);
+        if (row && row.expressNo) $('#shipNo').val(row.expressNo);
+        $('.modal-title:has(.fa-truck)').html('<i class="fa fa-pencil text-accent"></i> 修改物流信息');
+      } else {
+        $('.modal-title:has(.fa-truck)').html('<i class="fa fa-truck text-accent"></i> 订单发货');
+      }
+      bootstrap.Modal.getInstance(document.getElementById('detailModal'))?.hide();
+      new bootstrap.Modal('#shipModal').show();
+    }
+
+    function confirmShip() {
+      var id = G.currentShipId;
+      if (!id) return;
+      var expressCompany = $('#shipCompany').val();
+      var expressNo = $.trim($('#shipNo').val());
+      if (!expressNo) { alert('请输入快递单号'); return; }
+      ajax('/admin/order/ship', 'POST', { id: id, expressCompany: expressCompany, expressNo: expressNo }, function () {
+        alert('发货成功');
+        bootstrap.Modal.getInstance(document.getElementById('shipModal')).hide();
+        loadList(G.page);
+      });
+    }
+
+    // 清理超时未付款
+    function cancelTimeoutOrders() {
+      if (!confirm('确认手动清理超时未付款订单？')) return;
+      ajax('/admin/order/cancel-timeout', 'POST', null, function (msg) {
+        alert(msg || '清理完成');
+        loadList(G.page);
+      });
+    }
+
+    // CSV 导出
+    function exportCSV() {
+      if (!G.currentRows.length) { alert('当前没有可导出的数据'); return; }
+      var header = ['订单ID', '订单编号', '类型', '收货人', '手机号', '地址', '总金额', '状态', '下单时间', '快递公司', '快递单号', '备注'];
+      var rows = [header.join(',')];
+      G.currentRows.forEach(function (o) {
+        var row = [
+          o.id, o.orderNo || '', TYPE_MAP[o.orderType] || '',
+          (o.consignee || '').replace(/,/g, ' '),
+          (o.phone || '').replace(/,/g, ' '),
+          '"' + (o.address || '').replace(/"/g, '""') + '"',
+          fmtMoney(o.totalAmount),
+          STATUS_MAP[o.status] || '',
+          fmtTime(o.createTime),
+          o.expressCompany || '',
+          o.expressNo || '',
+          '"' + (o.remark || '').replace(/"/g, '""') + '"'
+        ];
+        rows.push(row.join(','));
+      });
+      var csv = '\ufeff' + rows.join('\r\n');
+      var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'orders_' + new Date().getTime() + '.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    $('#fOrderNo').on('keydown', function (e) { if (e.keyCode === 13) loadList(1); });
+
+    loadList(1);
+  </script>
+</body>
+</html>

@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.billiard.mapper.ProductMapper">
+
+    <!-- 商品列表分页：关联分类/品牌/比价，自动拼接主图URL -->
+    <select id="selectProductPage" resultType="java.util.Map">
+        SELECT p.id, p.name, p.model,
+               CONCAT(#{baseUrl}, p.img_dir, p.main_img) AS mainImg,
+               p.pic_count AS picCount,
+               p.cue_type AS cueType, p.hardness,
+               p.tip_diameter AS tipDiameter, p.weight,
+               p.material, p.spec, p.applicable_scene AS applicableScene,
+               p.params, p.description, p.sales, p.stock, p.status,
+               p.fit_play AS fitPlay, p.fit_power AS fitPower,
+               IF(c.name REGEXP '^[0-9]{2}_', SUBSTRING(c.name, 4), c.name) AS categoryName, b.name AS brandName,
+               pr.official_price AS officialPrice,
+               pr.pdd_price AS pddPrice,
+               pr.platform_price AS platformPrice
+        FROM product p
+        LEFT JOIN category c ON c.id = p.category_id
+        LEFT JOIN brand b ON b.id = p.brand_id
+        LEFT JOIN product_price pr ON pr.product_id = p.id
+        <where>
+            p.status = 1
+            <if test="categoryId != null">AND p.category_id = #{categoryId}</if>
+            <if test="brandId != null">AND p.brand_id = #{brandId}</if>
+            <if test="cueType != null and cueType != ''">AND p.cue_type = #{cueType}</if>
+            <if test="hardness != null and hardness != ''">AND p.hardness = #{hardness}</if>
+            <if test="keyword != null and keyword != ''">
+                AND (p.name LIKE CONCAT('%',#{keyword},'%') OR p.model LIKE CONCAT('%',#{keyword},'%'))
+            </if>
+            <if test="minPrice != null">AND pr.platform_price &gt;= #{minPrice}</if>
+            <if test="maxPrice != null">AND pr.platform_price &lt;= #{maxPrice}</if>
+        </where>
+        ORDER BY
+        <choose>
+            <when test="sort == 'sales-desc'">p.sales DESC</when>
+            <when test="sort == 'price-asc'">pr.platform_price ASC</when>
+            <when test="sort == 'price-desc'">pr.platform_price DESC</when>
+            <when test="sort == 'new'">p.create_time DESC</when>
+            <otherwise>p.sort ASC, p.id ASC</otherwise>
+        </choose>
+    </select>
+
+    <!-- 商品详情 -->
+    <select id="selectDetailById" resultType="java.util.Map">
+        SELECT p.id, p.name, p.model,
+               p.img_dir AS imgDir, p.main_img AS mainImgName, p.pic_count AS picCount,
+               CONCAT(#{baseUrl}, p.img_dir, p.main_img) AS mainImg,
+               p.cue_type AS cueType, p.hardness,
+               p.tip_diameter AS tipDiameter, p.weight,
+               p.material, p.spec, p.applicable_scene AS applicableScene,
+               p.params, p.description, p.sales, p.stock, p.status, p.sort,
+               p.fit_play AS fitPlay, p.fit_power AS fitPower,
+               p.category_id AS categoryId, p.brand_id AS brandId,
+               IF(c.name REGEXP '^[0-9]{2}_', SUBSTRING(c.name, 4), c.name) AS categoryName, b.name AS brandName,
+               pr.official_price AS officialPrice,
+               pr.pdd_price AS pddPrice,
+               pr.platform_price AS platformPrice
+        FROM product p
+        LEFT JOIN category c ON c.id = p.category_id
+        LEFT JOIN brand b ON b.id = p.brand_id
+        LEFT JOIN product_price pr ON pr.product_id = p.id
+        WHERE p.id = #{id} AND p.status = 1
+    </select>
+
+    <!-- 热门器材 -->
+    <select id="selectHotProducts" resultType="java.util.Map">
+        SELECT p.id, p.name,
+               CONCAT(#{baseUrl}, p.img_dir, p.main_img) AS mainImg,
+               p.cue_type AS cueType, p.sales,
+               pr.platform_price AS platformPrice
+        FROM product p
+        LEFT JOIN product_price pr ON pr.product_id = p.id
+        WHERE p.status = 1
+        ORDER BY p.sales DESC
+        LIMIT #{limit}
+    </select>
+
+    <!-- 比价专区 -->
+    <select id="selectComparePage" resultType="java.util.Map">
+        SELECT p.id, p.name,
+               CONCAT(#{baseUrl}, p.img_dir, p.main_img) AS mainImg,
+               IF(c.name REGEXP '^[0-9]{2}_', SUBSTRING(c.name, 4), c.name) AS categoryName,
+               pr.official_price AS officialPrice,
+               pr.pdd_price AS pddPrice,
+               pr.platform_price AS platformPrice,
+               (pr.official_price - pr.platform_price) AS saveAmount
+        FROM product p
+        LEFT JOIN category c ON c.id = p.category_id
+        LEFT JOIN product_price pr ON pr.product_id = p.id
+        <where>
+            p.status = 1
+            <if test="categoryId != null">AND p.category_id = #{categoryId}</if>
+            <if test="minPrice != null">AND pr.platform_price &gt;= #{minPrice}</if>
+            <if test="maxPrice != null">AND pr.platform_price &lt;= #{maxPrice}</if>
+        </where>
+        ORDER BY
+        <choose>
+            <when test="sort == 'price-asc'">pr.platform_price ASC</when>
+            <when test="sort == 'price-desc'">pr.platform_price DESC</when>
+            <when test="sort == 'save-desc'">(pr.official_price - pr.platform_price) DESC</when>
+            <otherwise>pr.platform_price ASC</otherwise>
+        </choose>
+    </select>
+
+    <!-- 销量排行榜 -->
+    <select id="selectSalesRank" resultType="java.util.Map">
+        SELECT p.id, p.name,
+               CONCAT(#{baseUrl}, p.img_dir, p.main_img) AS mainImg,
+               p.sales,
+               pr.platform_price AS platformPrice
+        FROM product p
+        LEFT JOIN product_price pr ON pr.product_id = p.id
+        WHERE p.status = 1
+        ORDER BY p.sales DESC
+        LIMIT #{limit}
+    </select>
+</mapper>

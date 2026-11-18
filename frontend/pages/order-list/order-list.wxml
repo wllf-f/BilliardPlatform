@@ -1,0 +1,80 @@
+<view class="order-list-page">
+  <!-- 状态筛选 -->
+  <view class="status-bar">
+    <view class="status-item {{currentStatus === '' ? 'active' : ''}}" bindtap="changeStatus" data-status="">全部</view>
+    <view class="status-item {{currentStatus === '0' ? 'active' : ''}}" bindtap="changeStatus" data-status="0">待付款</view>
+    <view class="status-item {{currentStatus === '1' ? 'active' : ''}}" bindtap="changeStatus" data-status="1">待发货</view>
+    <view class="status-item {{currentStatus === '2' ? 'active' : ''}}" bindtap="changeStatus" data-status="2">待收货</view>
+    <view class="status-item {{currentStatus === '3' ? 'active' : ''}}" bindtap="changeStatus" data-status="3">已完成</view>
+  </view>
+
+  <!-- 订单列表 -->
+  <view class="order-list">
+    <view class="order-card" wx:for="{{list}}" wx:key="id" bindtap="goDetail" data-id="{{item.id}}">
+      <!-- 订单头部 -->
+      <view class="order-header">
+        <view class="order-type">
+          <text class="type-tag {{item.orderType === 1 ? 'tag-normal' : (item.orderType === 2 ? 'tag-custom' : 'tag-tip')}}">{{item.orderTypeText}}</text>
+          <text class="order-no">单号：{{item.orderNo}}</text>
+        </view>
+        <view class="order-status-wrap">
+          <text class="order-status">{{item.statusText}}</text>
+          <text wx:if="{{item.status === 0 && item.countdown !== '已超时'}}" class="countdown-text">{{item.countdown}}</text>
+          <text wx:if="{{item.status === 2 && item.receiveCountdown !== '已超时'}}" class="countdown-text">自动收货：{{item.receiveCountdown}}</text>
+        </view>
+      </view>
+
+      <!-- 商品列表 -->
+      <view class="goods-list">
+        <view class="goods-item" wx:for="{{item.items}}" wx:for-item="goods" wx:key="id">
+          <image class="goods-img" src="{{goods.imgUrl}}" mode="aspectFill" lazy-load="true"></image>
+          <view class="goods-info">
+            <view class="goods-name ellipsis-2">{{goods.productName}}</view>
+            <view class="goods-price-row">
+              <text class="price">¥{{goods.price}}</text>
+              <text class="goods-qty">×{{goods.quantity}}</text>
+            </view>
+          </view>
+          <view class="goods-subtotal">
+            <text>¥{{goods.subtotal}}</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 定制表单摘要 -->
+      <view wx:if="{{item.customForm}}" class="custom-form-box">
+        <view class="custom-form-title">定制信息</view>
+        <view class="custom-form-summary">
+          <view class="custom-row"><text class="custom-label">打球类型：</text><text>{{item.customForm.playType || '-'}}</text></view>
+          <view class="custom-row"><text class="custom-label">杆型结构：</text><text>{{item.customForm.cueStructure || '-'}}</text></view>
+          <view class="custom-row"><text class="custom-label">握把类型：</text><text>{{item.customForm.gripType || '-'}}</text></view>
+        </view>
+      </view>
+
+      <!-- 订单底部 -->
+      <view class="order-footer">
+        <view class="order-time">{{item.createTimeDisplay}}</view>
+        <view class="order-total">
+          <text class="total-label">共{{item.itemCount}}件 合计：</text>
+          <text class="price total-amount">¥{{item.totalAmount}}</text>
+        </view>
+      </view>
+
+      <!-- 操作按钮 -->
+      <view class="order-actions">
+        <view wx:if="{{item.status === 0 && item.countdown !== '已超时'}}" class="action-btn cancel" catchtap="cancelOrder" data-id="{{item.id}}">取消订单</view>
+        <view wx:if="{{item.status === 0 && item.countdown !== '已超时'}}" class="action-btn pay" catchtap="payOrder" data-id="{{item.id}}">立即付款</view>
+        <view wx:if="{{item.status === 0 && item.countdown === '已超时'}}" class="action-btn" catchtap="deleteOrder" data-id="{{item.id}}">删除订单</view>
+        <view wx:if="{{item.status === 2}}" class="action-btn confirm" catchtap="confirmOrder" data-id="{{item.id}}">确认收货</view>
+        <view wx:if="{{item.status === 4}}" class="action-btn" catchtap="deleteOrder" data-id="{{item.id}}">删除订单</view>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{!loading && list.length === 0}}" class="empty-box">
+    <view class="empty-text">暂无订单</view>
+  </view>
+
+  <view wx:if="{{loading}}" class="loading-more">加载中...</view>
+  <view wx:if="{{!loading && list.length > 0 && noMore}}" class="no-more">— 没有更多了 —</view>
+</view>

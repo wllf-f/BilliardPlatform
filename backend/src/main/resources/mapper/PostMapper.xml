@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.billiard.mapper.PostMapper">
+
+    <!-- 帖子列表：关联用户昵称头像 -->
+    <select id="selectPostPage" resultType="java.util.Map">
+        SELECT p.id, p.title, p.content, p.images, p.status, p.reject_reason AS rejectReason,
+               p.view_count AS viewCount, p.like_count AS likeCount, p.comment_count AS commentCount,
+               DATE_FORMAT(p.create_time, '%Y-%m-%d %H:%i:%s') AS createTime,
+               u.id AS userId, u.nickname AS nickName, u.avatar
+        FROM post p
+        LEFT JOIN user u ON u.id = p.user_id
+        <where>
+            <if test="status != null">AND p.status = #{status}</if>
+            <!-- 我的帖子（userId 不为空且未按状态筛选）需排除已软删除帖子，避免删除后仍显示 -->
+            <if test="status == null and userId != null">AND p.status != 4</if>
+            <if test="userId != null">AND p.user_id = #{userId}</if>
+            <if test="keyword != null and keyword != ''">
+                AND (p.title LIKE CONCAT('%',#{keyword},'%') OR p.content LIKE CONCAT('%',#{keyword},'%'))
+            </if>
+        </where>
+        ORDER BY p.create_time DESC
+    </select>
+
+    <!-- 帖子列表（支持包含当前用户的隐藏帖子） -->
+    <select id="selectPostPageWithCurrentUser" resultType="java.util.Map">
+        SELECT p.id, p.title, p.content, p.images, p.status, p.reject_reason AS rejectReason,
+               p.view_count AS viewCount, p.like_count AS likeCount, p.comment_count AS commentCount,
+               DATE_FORMAT(p.create_time, '%Y-%m-%d %H:%i:%s') AS createTime,
+               u.id AS userId, u.nickname AS nickName, u.avatar
+        FROM post p
+        LEFT JOIN user u ON u.id = p.user_id
+        <where>
+            <if test="status != null">
+                AND (p.status = #{status}
+                <if test="currentUserId != null">
+                    OR (p.user_id = #{currentUserId} AND p.status = 3)
+                </if>
+                )
+            </if>
+            <if test="userId != null">AND p.user_id = #{userId}</if>
+            <if test="keyword != null and keyword != ''">
+                AND (p.title LIKE CONCAT('%',#{keyword},'%') OR p.content LIKE CONCAT('%',#{keyword},'%'))
+            </if>
+        </where>
+        ORDER BY p.create_time DESC
+    </select>
+
+    <!-- 帖子详情（关联用户昵称头像）——排除已软删除帖子(status=4) -->
+    <select id="selectDetailMap" resultType="java.util.Map">
+        SELECT p.*, p.user_id AS userId, p.reject_reason AS rejectReason, u.nickname AS nickName, u.avatar
+        FROM post p
+        LEFT JOIN user u ON u.id = p.user_id
+        WHERE p.id = #{id} AND p.status != 4
+    </select>
+
+    <!-- 更新浏览量 -->
+    <update id="updateViewCount">
+        UPDATE post SET view_count = #{count} WHERE id = #{id}
+    </update>
+
+    <!-- 评论数+1 -->
+    <update id="incrCommentCount">
+        UPDATE post SET comment_count = comment_count + 1 WHERE id = #{id}
+    </update>
+
+    <!-- 评论数-1 -->
+    <update id="decrCommentCount">
+        UPDATE post SET comment_count = GREATEST(0, comment_count - 1) WHERE id = #{id}
+    </update>
+
+    <!-- 更新点赞数（设置为指定值） -->
+    <update id="updateLikeCount">
+        UPDATE post SET like_count = #{count} WHERE id = #{id}
+    </update>
+
+    <!-- 点赞数+1（原子操作） -->
+    <update id="incrLikeCount">
+        UPDATE post SET like_count = like_count + 1 WHERE id = #{id}
+    </update>
+
+    <!-- 点赞数-1（不低于0，原子操作） -->
+    <update id="decrLikeCount">
+        UPDATE post SET like_count = GREATEST(0, like_count - 1) WHERE id = #{id}
+    </update>
+</mapper>

@@ -1,0 +1,41 @@
+<view class="category-page">
+  <view class="cat-layout">
+    <!-- 左侧分类 -->
+    <scroll-view class="left-scroll" scroll-y="true">
+      <view wx:for="{{categoryList}}" wx:key="id"
+            class="left-item {{activeIndex === index ? 'active' : ''}}"
+            bindtap="selectCategory" data-index="{{index}}" data-id="{{item.id}}">
+        <view wx:if="{{activeIndex === index}}" class="left-bar"></view>
+        <text>{{item.name}}</text>
+      </view>
+      <view wx:if="{{categoryList.length === 0 && !loading}}" class="empty-text">暂无分类</view>
+    </scroll-view>
+
+    <!-- 右侧品牌 -->
+    <scroll-view class="right-scroll" scroll-y="true">
+      <view wx:if="{{brandList.length > 0}}" class="brand-section">
+        <view class="brand-title">品牌筛选</view>
+        <view class="brand-grid">
+          <view class="brand-item" bindtap="goProductListByBrand" data-brand-id="">
+            <view class="brand-card all">全部</view>
+          </view>
+          <view class="brand-item" wx:for="{{brandList}}" wx:key="id"
+                bindtap="goProductListByBrand" data-brand-id="{{item.id}}">
+            <view class="brand-card">{{item.name}}</view>
+          </view>
+        </view>
+      </view>
+
+      <view wx:if="{{brandList.length === 0 && !loading}}" class="empty-box">
+        <view class="empty-text">该分类下暂无品牌</view>
+      </view>
+
+      <view class="entry-card" bindtap="goProductListByBrand" data-brand-id="">
+        <text class="entry-text">查看全部{{currentCategoryName}}商品</text>
+        <text class="entry-arrow">></text>
+      </view>
+    </scroll-view>
+  </view>
+
+  <view wx:if="{{loading}}" class="loading-more">加载中...</view>
+</view>

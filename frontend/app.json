@@ -1,0 +1,72 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/category/category",
+    "pages/compare/compare",
+    "pages/post-list/post-list",
+    "pages/profile/profile",
+    "pages/login/login",
+    "pages/product-list/product-list",
+    "pages/product-detail/product-detail",
+    "pages/recommend/recommend",
+    "pages/custom/custom",
+    "pages/tip-modify/tip-modify",
+    "pages/order/order",
+    "pages/address/address",
+    "pages/post-detail/post-detail",
+    "pages/post-create/post-create",
+    "pages/collection/collection",
+    "pages/my-post/my-post",
+    "pages/order-list/order-list",
+    "pages/order-detail/order-detail",
+    "pages/user-edit/user-edit"
+  ],
+  "window": {
+    "backgroundTextStyle": "dark",
+    "navigationBarBackgroundColor": "#1a6b3c",
+    "navigationBarTitleText": "台球器材优选",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#f5f6f8"
+  },
+  "tabBar": {
+    "color": "#999999",
+    "selectedColor": "#1a6b3c",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页",
+        "iconPath": "images/home.png",
+        "selectedIconPath": "images/home.png"
+      },
+      {
+        "pagePath": "pages/category/category",
+        "text": "分类",
+        "iconPath": "images/category.png",
+        "selectedIconPath": "images/category.png"
+      },
+      {
+        "pagePath": "pages/compare/compare",
+        "text": "比价",
+        "iconPath": "images/compare.png",
+        "selectedIconPath": "images/compare.png"
+      },
+      {
+        "pagePath": "pages/post-list/post-list",
+        "text": "社区",
+        "iconPath": "images/community.png",
+        "selectedIconPath": "images/community.png"
+      },
+      {
+        "pagePath": "pages/profile/profile",
+        "text": "我的",
+        "iconPath": "images/mine.png",
+        "selectedIconPath": "images/mine.png"
+      }
+    ]
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents"
+}

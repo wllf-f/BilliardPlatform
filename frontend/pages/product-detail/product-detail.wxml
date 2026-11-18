@@ -1,0 +1,79 @@
+<view class="detail-page" wx:if="{{detail}}">
+  <!-- 主图轮播 -->
+  <swiper class="banner" indicator-dots="true" circular="true" autoplay="true">
+    <swiper-item wx:for="{{detail.detailImgs}}" wx:key="*this" wx:for-index="idx">
+      <image class="banner-img" src="{{item}}" mode="aspectFill" bindtap="previewImg" data-url="{{item}}" binderror="onBannerImgError" data-idx="{{idx}}" data-url="{{item}}"></image>
+    </swiper-item>
+  </swiper>
+
+  <!-- 价格信息 -->
+  <view class="price-card">
+    <view class="price-row">
+      <view class="platform-price">
+        <text class="price-symbol">¥</text>
+        <text class="price-num">{{detail.platformPrice}}</text>
+      </view>
+      <view wx:if="{{detail.officialPrice}}" class="other-price">
+        <text>官方价 ¥{{detail.officialPrice}}</text>
+        <text wx:if="{{detail.pddPrice}}">拼多多 ¥{{detail.pddPrice}}</text>
+      </view>
+    </view>
+    <view class="sales-row">
+      <text>已售 {{detail.sales}} 件</text>
+      <text>库存 {{detail.stock}} 件</text>
+    </view>
+  </view>
+
+  <!-- 商品标题 -->
+  <view class="title-card">
+    <view class="title">{{detail.name}}</view>
+    <view class="tags">
+      <text wx:if="{{detail.cueType}}" class="tag tag-green">{{detail.cueType}}</text>
+      <text wx:if="{{detail.hardness}}" class="tag tag-orange">{{detail.hardness}}</text>
+      <text wx:if="{{detail.categoryName}}" class="tag">{{detail.categoryName}}</text>
+      <text wx:if="{{detail.brandName}}" class="tag">{{detail.brandName}}</text>
+    </view>
+  </view>
+
+  <!-- 规格参数：按需显示（只有有值的才显示） -->
+  <view wx:if="{{detail.specRows.length > 0}}" class="card">
+    <view class="card-title">规格参数</view>
+    <view wx:for="{{detail.specRows}}" wx:key="key" class="param-row">
+      <text class="param-label">{{item.key}}</text>
+      <text class="param-value">{{item.value}}</text>
+    </view>
+  </view>
+
+  <!-- 商品描述 -->
+  <view class="card">
+    <view class="card-title">商品描述</view>
+    <view class="desc">{{detail.description || '暂无描述'}}</view>
+  </view>
+
+  <!-- 详情图片 -->
+  <view wx:if="{{detail.detailImgs.length > 0}}" class="card">
+    <view class="card-title">详情图</view>
+    <image wx:for="{{detail.detailImgs}}" wx:key="*this" wx:for-index="idx2" class="detail-img" src="{{item}}" mode="widthFix" lazy-load="true" bindtap="previewImg" data-url="{{item}}" binderror="onDetailImgError" data-idx="{{idx2}}" data-url="{{item}}"></image>
+  </view>
+
+  <view style="height: 120rpx;"></view>
+
+  <!-- 底部操作栏 -->
+  <view class="bottom-bar">
+    <view class="bar-icon" bindtap="goHome">
+      <text class="bar-icon-text">🏠</text>
+      <text class="bar-text">首页</text>
+    </view>
+    <view class="bar-icon" bindtap="toggleCollect">
+      <text class="bar-icon-text">{{collected ? '❤️' : '🤍'}}</text>
+      <text class="bar-text">{{collected ? '已收藏' : '收藏'}}</text>
+    </view>
+    <view wx:if="{{!hideBuy}}" class="bar-btn buy-btn" bindtap="goBuy">立即购买</view>
+  </view>
+</view>
+
+<view wx:if="{{!detail && !loading}}" class="empty-box">
+  <view class="empty-text">商品不存在或已下架</view>
+</view>
+
+<view wx:if="{{loading}}" class="loading-more">加载中...</view>

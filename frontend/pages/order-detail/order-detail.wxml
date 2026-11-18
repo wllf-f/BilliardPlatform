@@ -1,0 +1,153 @@
+<view class="order-detail-page">
+  <!-- 订单状态 -->
+  <view class="status-card">
+    <view class="status-info">
+      <text class="status-text">{{statusText}}</text>
+      <text class="order-no">订单号：{{orderDetail.orderNo}}</text>
+    </view>
+    <view class="type-tag {{orderDetail.orderType === 1 ? 'tag-normal' : (orderDetail.orderType === 2 ? 'tag-custom' : 'tag-tip')}}">
+      {{orderTypeText}}
+    </view>
+    <view wx:if="{{orderDetail.status === 0}}" class="countdown-tip">
+      <text class="countdown-label">距付款截止：</text>
+      <text class="countdown-time">{{countdown}}</text>
+    </view>
+    <view wx:if="{{orderDetail.status === 2 && receiveCountdown !== '已超时自动收货'}}" class="countdown-tip">
+      <text class="countdown-label">距自动收货：</text>
+      <text class="countdown-time">{{receiveCountdown}}</text>
+    </view>
+  </view>
+
+  <!-- 收货地址 -->
+  <view class="card address-card">
+    <view class="card-title">收货信息</view>
+    <view class="address-content">
+      <view class="address-icon">  </view>
+      <view class="address-info">
+        <view class="address-top">
+          <text class="consignee">{{orderDetail.consignee}}</text>
+          <text class="phone">{{orderDetail.phone}}</text>
+        </view>
+        <view class="address-detail">{{orderDetail.address}}</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 物流信息（已发货后显示） -->
+  <view wx:if="{{orderDetail.expressCompany || orderDetail.expressNo}}" class="card logistics-card">
+    <view class="card-title">物流信息</view>
+    <view class="logistics-content">
+      <view class="logistics-row">
+        <text class="logistics-icon">📦</text>
+        <view class="logistics-info">
+          <view class="logistics-company">{{orderDetail.expressCompany}}</view>
+          <view class="logistics-no">快递单号：{{orderDetail.expressNo}}</view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 改装部地址（皮头更换订单显示） -->
+  <view wx:if="{{orderDetail.orderType === 3 && tipModifyAddress}}" class="card tip-address-card">
+    <view class="card-title">皮头改装地址</view>
+    <view class="address-content">
+      <view class="address-icon">📍</view>
+      <view class="address-info">
+        <view class="address-detail">{{tipModifyAddress}}</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 商品列表 -->
+  <view class="card goods-card">
+    <view class="card-title">商品信息</view>
+    <view class="goods-list">
+      <view class="goods-item" wx:for="{{orderDetail.items}}" wx:for-item="goods" wx:key="id">
+        <image class="goods-img" src="{{goods.imgUrl}}" mode="aspectFill"></image>
+        <view class="goods-info">
+          <view class="goods-name ellipsis-2">{{goods.productName}}</view>
+          <view class="goods-spec">单价：¥{{goods.price}} × {{goods.quantity}}</view>
+        </view>
+        <view class="goods-subtotal">¥{{goods.subtotal}}</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 定制信息（仁杆定制订单） -->
+  <view wx:if="{{orderDetail.customForm}}" class="card custom-card">
+    <view class="card-title">定制信息</view>
+    <view class="custom-form">
+      <view class="custom-section">
+        <view class="section-title">打球习惯</view>
+        <view class="custom-row"><text class="custom-label">打球类型：</text><text>{{orderDetail.customForm.playType || '-'}}</text></view>
+        <view class="custom-row"><text class="custom-label">发力风格：</text><text>{{orderDetail.customForm.powerStyle || '-'}}</text></view>
+        <view class="custom-row"><text class="custom-label">技术偏好：</text><text>{{orderDetail.customForm.techPref || '-'}}</text></view>
+        <view class="custom-row"><text class="custom-label">打感选择：</text><text>{{orderDetail.customForm.feelChoice || '-'}}</text></view>
+      </view>
+      <view class="custom-section">
+        <view class="section-title">物理参数</view>
+        <view class="custom-row"><text class="custom-label">杆型结构：</text><text>{{orderDetail.customForm.cueStructure || '-'}}</text></view>
+        <view class="custom-row"><text class="custom-label">总长：</text><text>{{orderDetail.customForm.totalLength || '-'}}cm</text></view>
+        <view class="custom-row"><text class="custom-label">总重量：</text><text>{{orderDetail.customForm.totalWeight || '-'}}oz</text></view>
+        <view class="custom-row"><text class="custom-label">平衡点：</text><text>{{orderDetail.customForm.balancePoint || '-'}}cm</text></view>
+        <view class="custom-row"><text class="custom-label">先角直径：</text><text>{{orderDetail.customForm.tipDiameter || '-'}}mm</text></view>
+        <view class="custom-row"><text class="custom-label">握把外径：</text><text>{{orderDetail.customForm.gripDiameter || '-'}}mm</text></view>
+      </view>
+      <view class="custom-section">
+        <view class="section-title">外观工艺</view>
+        <view class="custom-row"><text class="custom-label">底木材质：</text><text>{{orderDetail.customForm.baseWood || '-'}}</text></view>
+        <view class="custom-row"><text class="custom-label">握把类型：</text><text>{{orderDetail.customForm.gripType || '-'}}</text></view>
+        <view class="custom-row"><text class="custom-label">插花方案：</text><text>{{orderDetail.customForm.insertPlan || '-'}}</text></view>
+        <view class="custom-row"><text class="custom-label">镶嵌配置：</text><text>{{orderDetail.customForm.inlayConfig || '-'}}</text></view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 订单信息 -->
+  <view class="card info-card">
+    <view class="card-title">订单信息</view>
+    <view class="info-list">
+      <view class="info-row">
+        <text class="info-label">下单时间</text>
+        <text class="info-value">{{orderDetail.createTimeDisplay || '-'}}</text>
+      </view>
+      <view class="info-row">
+        <text class="info-label">付款时间</text>
+        <text class="info-value">{{orderDetail.payTimeDisplay || '-'}}</text>
+      </view>
+      <view class="info-row">
+        <text class="info-label">发货时间</text>
+        <text class="info-value">{{orderDetail.shipTimeDisplay || '-'}}</text>
+      </view>
+      <view class="info-row">
+        <text class="info-label">完成时间</text>
+        <text class="info-value">{{orderDetail.finishTimeDisplay || '-'}}</text>
+      </view>
+      <view wx:if="{{orderDetail.remark}}" class="info-row">
+        <text class="info-label">订单备注</text>
+        <text class="info-value">{{orderDetail.remark}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 订单金额 -->
+  <view class="card amount-card">
+    <view class="amount-row">
+      <text class="amount-label">商品金额</text>
+      <text class="amount-value">¥{{orderDetail.totalAmount}}</text>
+    </view>
+    <view class="amount-row total">
+      <text class="amount-label">订单总额</text>
+      <text class="amount-value">¥{{orderDetail.totalAmount}}</text>
+    </view>
+  </view>
+
+  <!-- 底部操作 -->
+  <view class="bottom-bar">
+    <view wx:if="{{orderDetail.status === 0}}" class="action-btn cancel" bindtap="cancelOrder">取消订单</view>
+    <view wx:if="{{orderDetail.status === 0}}" class="action-btn pay" bindtap="payOrder">立即付款</view>
+    <view wx:if="{{orderDetail.status === 2}}" class="action-btn confirm" bindtap="confirmOrder">确认收货</view>
+    <view wx:if="{{orderDetail.status === 4}}" class="action-btn" bindtap="deleteOrder">删除订单</view>
+    <view wx:if="{{orderDetail.status === 1 || orderDetail.status === 2 || orderDetail.status === 3}}" class="action-btn" bindtap="applyRefund">申请退款</view>
+  </view>
+</view>

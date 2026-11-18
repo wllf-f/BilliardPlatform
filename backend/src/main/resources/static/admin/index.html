@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>管理后台 - 台球器材商城</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="admin-frame">
+    <!-- 侧边栏 -->
+    <div class="sidebar">
+      <div class="sidebar-brand">
+        <i class="fa fa-tachometer"></i> 台球商城后台
+      </div>
+      <ul class="sidebar-nav" id="navList">
+        <li><a data-page="product" data-title="商品管理"><i class="fa fa-cubes"></i> 商品管理</a></li>
+        <li><a data-page="order" data-title="订单管理"><i class="fa fa-file-text-o"></i> 订单管理</a></li>
+        <li><a data-page="user" data-title="用户管理"><i class="fa fa-users"></i> 用户管理</a></li>
+        <li><a data-page="admin" data-title="管理员管理"><i class="fa fa-user-md"></i> 管理员管理</a></li>
+        <li><a data-page="post" data-title="内容审核"><i class="fa fa-comments-o"></i> 内容审核</a></li>
+        <li><a data-page="stats" data-title="销售统计"><i class="fa fa-bar-chart"></i> 销售统计</a></li>
+        <li><a data-page="config" data-title="系统配置"><i class="fa fa-cog"></i> 系统配置</a></li>
+        <li><a data-page="sensitive" data-title="违规词管理"><i class="fa fa-ban"></i> 违规词管理</a></li>
+      </ul>
+    </div>
+
+    <!-- 主区域 -->
+    <div class="main-area">
+      <div class="topbar">
+        <div class="topbar-title" id="topbarTitle">商品管理</div>
+        <div class="topbar-admin">
+          <span id="adminAvatarWrap"><i class="fa fa-user-circle" style="font-size:30px;color:#16a085;"></i></span>
+          <span class="name" id="adminName">管理员</span>
+          <button class="btn btn-sm btn-outline-secondary" onclick="adminLogout()">
+            <i class="fa fa-sign-out"></i> 退出
+          </button>
+        </div>
+      </div>
+      <iframe id="contentFrame" class="content-iframe" src="pages/product.html?v=10"></iframe>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.0/dist/jquery.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="js/common.js?v=11"></script>
+  <script>
+    // 登录校验
+    if (!localStorage.getItem('adminToken')) {
+      location.href = 'login.html';
+    }
+
+    // 渲染顶部管理员信息
+    (function () {
+      var info = {};
+      try { info = JSON.parse(localStorage.getItem('adminInfo') || '{}'); } catch (e) {}
+      $('#adminName').text(info.realName || info.username || '管理员');
+      var av = info.avatar;
+      if (av) {
+        $('#adminAvatarWrap').html('<img class="rounded-circle" style="width:32px;height:32px;object-fit:cover;" src="' + esc(av) + '" onerror="this.parentNode.innerHTML=\'<i class=\\\'fa fa-user-circle\\\' style=\\\'font-size:30px;color:#16a085;\\\'></i>\'">');
+      }
+    })();
+
+    // 导航切换
+    function loadPage(page, title) {
+      $('#contentFrame').attr('src', 'pages/' + page + '.html?v=10');
+      $('#topbarTitle').text(title);
+      $('#navList li a').removeClass('active');
+      $('#navList li a[data-page="' + page + '"]').addClass('active');
+      try { localStorage.setItem('adminPage', page); } catch (e) {}
+    }
+
+    $('#navList').on('click', 'li a', function () {
+      var page = $(this).data('page');
+      var title = $(this).data('title');
+      loadPage(page, title);
+    });
+
+    // 默认激活商品管理（或上次的页面）
+    var saved = 'product';
+    try { saved = localStorage.getItem('adminPage') || 'product'; } catch (e) {}
+    var $saved = $('#navList li a[data-page="' + saved + '"]');
+    if ($saved.length) {
+      loadPage(saved, $saved.data('title'));
+    } else {
+      $('#navList li a').first().addClass('active');
+    }
+
+    // 自适应 iframe 高度
+    function resizeFrame() {
+      var h = window.innerHeight - 56;
+      $('#contentFrame').css('min-height', h + 'px');
+    }
+    resizeFrame();
+    $(window).on('resize', resizeFrame);
+  </script>
+</body>
+</html>

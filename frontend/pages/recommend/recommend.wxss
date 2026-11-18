@@ -1,0 +1,291 @@
+.recommend-page {
+  padding-bottom: 30rpx;
+}
+
+/* ===== 自定义导航栏 ===== */
+.custom-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  background: #fff;
+  border-bottom: 1rpx solid #eee;
+  z-index: 1000;
+  box-sizing: border-box;
+}
+.nav-content {
+  display: flex;
+  align-items: center;
+  position: relative;
+  /* 右侧留出胶囊按钮空间（胶囊宽 87px + 右边距 10px + 余量） */
+  padding-right: 220rpx;
+  box-sizing: border-box;
+}
+.nav-back {
+  width: 64rpx;
+  height: 64rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 6rpx;
+  border-radius: 50%;
+}
+.nav-back-hover {
+  background: #f2f2f2;
+}
+.nav-back-arrow {
+  /* CSS 绘制左箭头 */
+  width: 20rpx;
+  height: 20rpx;
+  border-left: 4rpx solid #333;
+  border-bottom: 4rpx solid #333;
+  transform: rotate(45deg);
+  margin-left: 6rpx;
+}
+.nav-title {
+  /* 标题在整个导航栏视觉居中（忽略右侧胶囊） */
+  position: absolute;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+  pointer-events: none;
+}
+
+.step-section {
+  margin: 20rpx 24rpx;
+}
+
+.step-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 30rpx;
+}
+
+.type-grid {
+  display: flex;
+  justify-content: space-between;
+}
+
+.type-card {
+  width: 48%;
+  background: #f9f9f9;
+  border-radius: 16rpx;
+  padding: 40rpx 20rpx;
+  text-align: center;
+  border: 2rpx solid transparent;
+}
+
+.type-card.active {
+  background: #e8f5ee;
+  border-color: #1a6b3c;
+}
+
+.type-icon {
+  font-size: 80rpx;
+  margin-bottom: 20rpx;
+}
+
+.type-name {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 10rpx;
+}
+
+.type-desc {
+  font-size: 22rpx;
+  color: #999;
+}
+
+.form-group {
+  margin-bottom: 30rpx;
+}
+
+.form-label {
+  font-size: 28rpx;
+  color: #333;
+  margin-bottom: 16rpx;
+  font-weight: 500;
+}
+
+.opts {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.opt {
+  padding: 14rpx 36rpx;
+  background: #f5f5f5;
+  border-radius: 30rpx;
+  font-size: 26rpx;
+  color: #666;
+  margin: 0 16rpx 16rpx 0;
+}
+
+.opt.active {
+  background: #1a6b3c;
+  color: #fff;
+}
+
+.range-inputs {
+  display: flex;
+  align-items: center;
+}
+
+.range-input {
+  flex: 1;
+  background: #f5f5f5;
+  border-radius: 8rpx;
+  padding: 20rpx;
+  font-size: 26rpx;
+}
+
+.range-line {
+  margin: 0 20rpx;
+  color: #999;
+}
+
+.btn-group {
+  display: flex;
+  margin-top: 40rpx;
+}
+
+.btn-group .btn-outline {
+  flex: 1;
+  margin-right: 20rpx;
+}
+
+.btn-group .btn-primary {
+  flex: 1;
+}
+
+.result-section {
+  padding: 20rpx 24rpx;
+}
+
+.result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20rpx;
+}
+
+.result-title {
+  font-size: 30rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.result-reset {
+  font-size: 26rpx;
+  color: #1a6b3c;
+}
+
+.result-card {
+  display: flex;
+  background: #fff;
+  border-radius: 16rpx;
+  margin-bottom: 20rpx;
+  overflow: hidden;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.05);
+}
+
+.result-img {
+  width: 220rpx;
+  height: 220rpx;
+  background: #f5f5f5;
+  flex-shrink: 0;
+}
+
+.result-info {
+  flex: 1;
+  padding: 20rpx;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.result-name {
+  font-size: 28rpx;
+  color: #333;
+  line-height: 1.4;
+}
+
+.result-tags {
+  margin: 10rpx 0;
+}
+
+.result-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.match-score {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.score-label {
+  font-size: 20rpx;
+  color: #999;
+}
+
+.score-val {
+  font-size: 28rpx;
+  color: #1a6b3c;
+  font-weight: bold;
+}
+
+/* 球杆推荐理由文本 */
+.result-reason {
+  font-size: 22rpx;
+  color: #888;
+  line-height: 1.5;
+  margin: 6rpx 0;
+  padding: 10rpx 12rpx;
+  background: #f9f9f4;
+  border-radius: 6rpx;
+  border-left: 4rpx solid #d4b106;
+}
+
+/* 表单单行输入框（预算输入） */
+.form-input {
+  background: #f5f5f5;
+  border-radius: 8rpx;
+  padding: 20rpx;
+  font-size: 26rpx;
+}
+
+/* 匹配等级标签颜色 */
+.tag-blue {
+  background: #e6f7ff;
+  color: #1890ff;
+  border: 1rpx solid #91d5ff;
+}
+.tag-gray {
+  background: #f5f5f5;
+  color: #999;
+  border: 1rpx solid #e0e0e0;
+}
+
+/* 空结果提示 */
+.empty-box {
+  padding: 80rpx 40rpx;
+  text-align: center;
+}
+.empty-text {
+  font-size: 32rpx;
+  color: #999;
+  margin-bottom: 16rpx;
+}
+.empty-sub {
+  font-size: 26rpx;
+  color: #bbb;
+}

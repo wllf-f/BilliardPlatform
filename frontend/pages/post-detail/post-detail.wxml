@@ -1,0 +1,75 @@
+<view class="post-detail-page" wx:if="{{post}}">
+  <!-- 帖子内容 -->
+  <view class="card post-card">
+    <view class="post-header">
+      <image class="avatar" src="{{post.avatar || '/images/default-avatar.png'}}" mode="aspectFill"></image>
+      <view class="user-info">
+        <view class="nick-name">{{post.nickName}}</view>
+        <view class="create-time">{{post.createTime}}</view>
+      </view>
+      <!-- 作者操作按钮（仅作者可见） -->
+      <view wx:if="{{isOwner}}" class="header-actions">
+        <view class="header-btn btn-toggle" bindtap="toggleHidden">
+          {{post.status === 3 ? '公开' : '隐藏'}}
+        </view>
+        <view class="header-btn btn-delete" bindtap="deletePost">删除</view>
+      </view>
+    </view>
+    <!-- 帖子状态显示 -->
+    <view wx:if="{{post.status === 3}}" class="post-status status-hidden">帖子已隐藏（仅自己可见）</view>
+    <view wx:elif="{{post.status === 1}}" class="post-status status-public">帖子已公开</view>
+    <view wx:elif="{{post.status === 0}}" class="post-status status-pending">待审核</view>
+    <view wx:elif="{{post.status === 2}}" class="post-status status-rejected">已驳回</view>
+    <!-- 驳回原因显示 -->
+    <view wx:if="{{post.status === 2 && post.rejectReason}}" class="reject-reason">
+      <view class="reject-label">驳回原因</view>
+      <view class="reject-text">{{post.rejectReason}}</view>
+    </view>
+
+    <view class="post-title">{{post.title}}</view>
+    <view class="post-content">{{post.content || ''}}</view>
+    <view wx:if="{{post.imgList.length > 0}}" class="post-images">
+      <image wx:for="{{post.imgList}}" wx:key="*this" class="post-img" src="{{item}}" mode="widthFix" lazy-load="true" bindtap="previewImg" data-url="{{item}}"></image>
+    </view>
+    <view class="post-stats">
+      <view class="stat-item" bindtap="toggleLike">
+        <text class="stat-icon">{{liked ? '❤️' : '🤍'}}</text>
+        <text>{{likeCount}}</text>
+      </view>
+      <view class="stat-item">
+        <text class="stat-icon">👁</text>
+        <text>{{views}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 评论区 -->
+  <view class="card comment-section">
+    <view class="section-title">评论 {{commentList.length}}</view>
+    <view wx:if="{{commentList.length > 0}}" class="comment-list">
+      <view class="comment-item" wx:for="{{commentList}}" wx:key="id">
+        <image class="comment-avatar" src="{{item.avatar || '/images/default-avatar.png'}}" mode="aspectFill"></image>
+        <view class="comment-body">
+          <view class="comment-name">{{item.nickName}}</view>
+          <view class="comment-text">{{item.content}}</view>
+          <view class="comment-time">{{item.createTime}}</view>
+        </view>
+      </view>
+    </view>
+    <view wx:else class="empty-comment">暂无评论，快来抢沙发</view>
+  </view>
+
+  <view style="height: 120rpx;"></view>
+
+  <!-- 底部评论输入 -->
+  <view class="bottom-input">
+    <input class="comment-input" placeholder="写评论..." value="{{commentText}}" bindinput="onCommentInput" confirm-type="send" bindconfirm="sendComment" />
+    <view class="send-btn" bindtap="sendComment">发送</view>
+  </view>
+</view>
+
+<view wx:if="{{!post && !loading}}" class="empty-box">
+  <view class="empty-text">帖子不存在</view>
+</view>
+
+<view wx:if="{{loading}}" class="loading-more">加载中...</view>

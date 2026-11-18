@@ -1,0 +1,128 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>用户管理</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css">
+  <link rel="stylesheet" href="../css/style.css?v=6">
+</head>
+<body>
+  <div class="page-wrap">
+    <div class="page-header">
+      <h4><i class="fa fa-users text-accent"></i> 用户管理</h4>
+      <span class="muted" id="totalInfo"></span>
+    </div>
+
+    <div class="filter-bar">
+      <input type="text" class="form-control" id="fKeyword" placeholder="昵称/用户名/手机号搜索" style="min-width:240px;">
+      <button class="btn btn-sm btn-accent" onclick="loadList(1)"><i class="fa fa-search"></i> 查询</button>
+      <button class="btn btn-sm btn-outline-secondary" onclick="doReset()"><i class="fa fa-refresh"></i> 重置</button>
+    </div>
+
+    <div class="table-card">
+      <table class="table table-hover align-middle">
+        <thead>
+          <tr>
+            <th style="width:55px;">ID</th>
+            <th style="width:55px;">头像</th>
+            <th>用户名</th>
+            <th>昵称</th>
+            <th>手机号</th>
+            <th style="width:50px;">性别</th>
+            <th style="width:110px;">OpenID</th>
+            <th style="width:65px;">状态</th>
+            <th style="width:140px;">注册时间</th>
+            <th style="width:180px;">操作</th>
+          </tr>
+        </thead>
+        <tbody id="dataBody">
+          <tr><td colspan="10" class="loading"><i class="fa fa-spinner fa-spin"></i> 加载中...</td></tr>
+        </tbody>
+      </table>
+      <div class="pager" id="pager"></div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.0/dist/jquery.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="../js/common.js?v=11"></script>
+  <script>
+    // 进入页面时校验登录态，未登录跳转到登录页
+    if (!localStorage.getItem('adminToken')) {
+      location.href = '../login.html';
+    }
+  </script>
+  <script>
+    var PAGE = { page: 1, size: 10, total: 0 };
+    var GENDER_MAP = { 1: '男', 2: '女', 0: '未知' };
+
+    function loadList(p) {
+      PAGE.page = p || 1;
+      $('#dataBody').html('<tr><td colspan="10" class="loading"><i class="fa fa-spinner fa-spin"></i> 加载中...</td></tr>');
+      ajax('/admin/user/list', 'GET', { page: PAGE.page, size: PAGE.size, keyword: $.trim($('#fKeyword').val()) }, function (res) {
+        PAGE.total = res.total || 0;
+        var list = res.records || [];
+        var h = '';
+        if (!list.length) {
+          h = '<tr><td colspan="10" class="empty-tip"><i class="fa fa-inbox"></i> 暂无用户数据</td></tr>';
+        } else {
+          list.forEach(function (u) {
+            // 头像渲染：底层图标 + 上层图片（同源 URL，通过 avatarUrl 拼接）
+            var avt = '<span class="avatar-wrap"><i class="fa fa-user-circle"></i>'
+              + '<img src="' + esc(avatarUrl(u.avatar)) + '" onerror="this.style.display=\'none\'"></span>';
+            // 状态徽章
+            var badge = u.status === 1
+              ? '<span class="badge status-on">正常</span>'
+              : '<span class="badge status-off">已禁用</span>';
+            // 操作按钮
+            var btn = '<button class="btn btn-sm btn-outline-secondary me-1" onclick="resetPwd(' + u.id + ')">重置密码</button>';
+            btn += u.status === 1
+              ? '<button class="btn btn-sm btn-outline-danger" onclick="toggleStatus(' + u.id + ',0)">禁用</button>'
+              : '<button class="btn btn-sm btn-outline-accent" onclick="toggleStatus(' + u.id + ',1)">启用</button>';
+            // openid 截取显示
+            var oid = u.openid ? esc(u.openid.substring(0, 12)) : '-';
+            // 性别
+            var sex = GENDER_MAP[u.gender] || '未知';
+            h += '<tr>'
+              + '<td class="fs-13">' + u.id + '</td>'
+              + '<td>' + avt + '</td>'
+              + '<td>' + esc(u.username || '-') + '</td>'
+              + '<td>' + esc(u.nickname || '-') + '</td>'
+              + '<td>' + esc(u.phone || '-') + '</td>'
+              + '<td>' + sex + '</td>'
+              + '<td class="fs-13 muted">' + oid + '</td>'
+              + '<td>' + badge + '</td>'
+              + '<td class="fs-13">' + fmtTime(u.createTime) + '</td>'
+              + '<td>' + btn + '</td>'
+              + '</tr>';
+          });
+        }
+        $('#dataBody').html(h);
+        $('#totalInfo').text('共 ' + PAGE.total + ' 人');
+        renderPager('#pager', PAGE.page, PAGE.size, PAGE.total, function (n) { loadList(n); });
+      });
+    }
+
+    function doReset() { $('#fKeyword').val(''); loadList(1); }
+
+    function toggleStatus(id, st) {
+      if (!confirm(st === 1 ? '确认启用该用户？' : '确认禁用该用户？')) return;
+      ajax('/admin/user/status/' + id + '/' + st, 'POST', null, function () { loadList(PAGE.page); });
+    }
+
+    function resetPwd(id) {
+      if (!confirm('确认将该用户密码重置为 123456 吗？')) return;
+      ajax('/admin/user/reset-password/' + id, 'POST', null, function (msg) {
+        alert(msg || '密码已重置为 123456');
+        loadList(PAGE.page);
+      });
+    }
+
+    $('#fKeyword').on('keydown', function (e) { if (e.key === 'Enter') loadList(1); });
+    loadList(1);
+  </script>
+</body>
+</html>
+

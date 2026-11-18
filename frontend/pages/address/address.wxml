@@ -1,0 +1,116 @@
+<view class="address-page">
+  <!-- 订单确认模式：商品信息摘要 -->
+  <view wx:if="{{orderConfirmMode}}" class="card confirm-card">
+    <view wx:if="{{orderType === 2}}" class="confirm-info">
+      <view class="confirm-title">仁杆定制订单</view>
+      <view class="confirm-price">定制价 ¥{{customPrice}}</view>
+    </view>
+    <view wx:if="{{orderType === 3 && tipInfo}}" class="confirm-info">
+      <view class="confirm-title">{{tipInfo.option === 'own' ? '自备皮头改装' : '购买皮头改装'}}</view>
+      <view wx:if="{{tipInfo.option === 'buy' && tipInfo.product}}" class="confirm-product">
+        <image class="confirm-img" src="{{tipInfo.product.mainImg}}" mode="aspectFill"></image>
+        <view class="confirm-product-info">
+          <view class="confirm-product-name ellipsis">{{tipInfo.product.name}}</view>
+          <view class="price">¥{{tipInfo.product.platformPrice}} + 手工费</view>
+        </view>
+      </view>
+      <view wx:if="{{tipInfo.option === 'own'}}" class="confirm-price">服务费 + 手工费 = ¥{{ownTotal}}</view>
+    </view>
+  </view>
+
+  <!-- 地址列表 -->
+  <view class="addr-list">
+    <view class="addr-item" wx:for="{{addressList}}" wx:key="id">
+      <view class="addr-item-main" bindtap="onSelectAddress" data-id="{{item.id}}" data-index="{{index}}">
+        <view class="addr-item-top">
+          <text class="addr-item-name">{{item.consignee}}</text>
+          <text class="addr-item-phone">{{item.phone}}</text>
+          <text wx:if="{{item.isDefault === 1}}" class="default-tag">默认</text>
+        </view>
+        <view class="addr-item-detail">{{item.province}}{{item.city}}{{item.district}} {{item.detail}}</view>
+      </view>
+      <view class="addr-item-ops">
+        <view wx:if="{{orderConfirmMode}}" class="select-btn" bindtap="onSelectAddress" data-id="{{item.id}}" data-index="{{index}}">
+          {{selectedAddrId === item.id ? '✓ 已选' : '选择'}}
+        </view>
+        <view class="op-btn edit" bindtap="editAddress" data-index="{{index}}">编辑</view>
+        <view wx:if="{{item.isDefault !== 1 && !orderConfirmMode}}" class="op-btn" bindtap="setDefault" data-id="{{item.id}}">设为默认</view>
+        <view wx:if="{{!orderConfirmMode}}" class="op-btn delete" bindtap="deleteAddress" data-id="{{item.id}}">删除</view>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{!loading && addressList.length === 0}}" class="empty-box">
+    <view class="empty-icon">📍</view>
+    <view class="empty-text">暂无收货地址</view>
+    <view class="empty-tip">请填写收货地址后下单</view>
+    <view class="empty-btn" bindtap="addAddress">+ 添加收货地址</view>
+  </view>
+
+  <!-- 订单确认模式：数量和备注 -->
+  <view wx:if="{{orderConfirmMode && selectedAddrId}}" class="card">
+    <view wx:if="{{orderType === 3 && tipInfo && tipInfo.option === 'buy'}}" class="quantity-row">
+      <text class="quantity-label">购买数量</text>
+      <view class="quantity-control">
+        <view class="qty-btn" bindtap="minusQty">-</view>
+        <view class="qty-num">{{quantity}}</view>
+        <view class="qty-btn" bindtap="plusQty">+</view>
+      </view>
+    </view>
+    <view class="remark-row">
+      <text class="remark-label">订单备注</text>
+      <input class="remark-input" placeholder="选填，给商家留言" value="{{remark}}" bindinput="onRemarkInput" />
+    </view>
+    <view class="total-row">
+      <text>合计：</text>
+      <text class="price"><text class="price-symbol">¥</text>{{totalPrice}}</text>
+    </view>
+  </view>
+
+  <view style="height: 140rpx;"></view>
+
+  <!-- 底部按钮 -->
+  <view class="bottom-bar">
+    <view wx:if="{{orderConfirmMode}}" class="bar-submit" bindtap="confirmOrder">
+      确认下单
+    </view>
+    <view wx:else class="bar-submit" bindtap="addAddress">
+      + 新增收货地址
+    </view>
+  </view>
+
+  <!-- 新增/编辑弹窗 -->
+  <view wx:if="{{formVisible}}" class="mask" bindtap="hideForm">
+    <view class="form-panel" catchtap="stopTap">
+      <view class="form-title">{{editingAddress ? '编辑地址' : '新增地址'}}</view>
+      <view class="form-input-row">
+        <text class="form-input-label">收货人</text>
+        <input class="form-input-box" placeholder="收货人姓名" value="{{addrForm.consignee}}" bindinput="onFormInput" data-field="consignee" />
+      </view>
+      <view class="form-input-row">
+        <text class="form-input-label">手机号</text>
+        <input class="form-input-box" type="number" placeholder="手机号" value="{{addrForm.phone}}" bindinput="onFormInput" data-field="phone" />
+      </view>
+      <picker mode="region" value="{{regionValue}}" bindchange="onRegionChange">
+        <view class="form-input-row form-input-clickable">
+          <text class="form-input-label">省市区</text>
+          <text wx:if="{{addrForm.province}}" class="form-input-box region-text">{{addrForm.province}} {{addrForm.city}} {{addrForm.district}}</text>
+          <text wx:else class="form-input-box placeholder-text">请选择省/市/区</text>
+          <text class="region-arrow">›</text>
+        </view>
+      </picker>
+      <view class="form-input-row">
+        <text class="form-input-label">详细地址</text>
+        <input class="form-input-box" placeholder="街道、楼牌号等" value="{{addrForm.detail}}" bindinput="onFormInput" data-field="detail" />
+      </view>
+      <view class="form-input-row default-row">
+        <text class="form-input-label">设为默认</text>
+        <switch checked="{{addrForm.isDefault === 1}}" bindchange="onDefaultChange" color="#1a6b3c" />
+      </view>
+      <view class="form-btns">
+        <view class="form-btn cancel" bindtap="hideForm">取消</view>
+        <view class="form-btn confirm" bindtap="saveAddress">保存</view>
+      </view>
+    </view>
+  </view>
+</view>

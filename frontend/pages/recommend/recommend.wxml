@@ -1,0 +1,172 @@
+<view class="recommend-page">
+  <!-- 自定义导航栏（fixed 定位，避开右上角胶囊按钮） -->
+  <view class="custom-nav" style="height: {{navTotalHeight}}px;">
+    <view style="height: {{statusBarHeight}}px;"></view>
+    <view class="nav-content" style="height: {{navBarHeight}}px;">
+      <view class="nav-back" bindtap="navBack" hover-class="nav-back-hover">
+        <view class="nav-back-arrow"></view>
+      </view>
+      <view class="nav-title">智能推荐</view>
+    </view>
+  </view>
+  <!-- 导航栏占位（撑开内容区，避免被 fixed 导航栏遮挡） -->
+  <view style="height: {{navTotalHeight}}px;"></view>
+
+  <!-- 步骤1: 选择类型 -->
+  <view class="step-section card" wx:if="{{step === 1}}">
+    <view class="step-title">第1步：选择推荐类型</view>
+    <view class="type-grid">
+      <view class="type-card {{recType === 'cue' ? 'active' : ''}}" bindtap="selectType" data-type="cue">
+        <view class="type-icon">🎱</view>
+        <view class="type-name">球杆推荐</view>
+        <view class="type-desc">智能问卷匹配，2主推+1备选</view>
+      </view>
+      <view class="type-card {{recType === 'tip' ? 'active' : ''}}" bindtap="selectType" data-type="tip">
+        <view class="type-icon">🔧</view>
+        <view class="type-name">皮头推荐</view>
+        <view class="type-desc">根据硬度需求推荐皮头</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 步骤2: 填写参数 -->
+  <view class="step-section card" wx:if="{{step === 2}}">
+    <view class="step-title">{{recType === 'cue' ? '球杆偏好问卷（5项）' : '皮头偏好参数'}}</view>
+
+    <!-- 球杆推荐：5项问卷（playType/level/powerType/likeType/userPrice） -->
+    <block wx:if="{{recType === 'cue'}}">
+      <view class="form-group">
+        <view class="form-label">1. 您的打法偏好</view>
+        <view class="opts">
+          <view class="opt {{cueForm.playType === '准度防守' ? 'active' : ''}}" bindtap="setCueField" data-field="playType" data-val="准度防守">准度防守</view>
+          <view class="opt {{cueForm.playType === '追分走位' ? 'active' : ''}}" bindtap="setCueField" data-field="playType" data-val="追分走位">追分走位</view>
+          <view class="opt {{cueForm.playType === '均衡打法' ? 'active' : ''}}" bindtap="setCueField" data-field="playType" data-val="均衡打法">均衡打法</view>
+          <view class="opt {{cueForm.playType === '斯诺克玩法' ? 'active' : ''}}" bindtap="setCueField" data-field="playType" data-val="斯诺克玩法">斯诺克玩法</view>
+        </view>
+      </view>
+      <view class="form-group">
+        <view class="form-label">2. 球龄水平</view>
+        <view class="opts">
+          <view class="opt {{cueForm.level === '新手' ? 'active' : ''}}" bindtap="setCueField" data-field="level" data-val="新手">新手</view>
+          <view class="opt {{cueForm.level === '中级' ? 'active' : ''}}" bindtap="setCueField" data-field="level" data-val="中级">中级</view>
+          <view class="opt {{cueForm.level === '高手' ? 'active' : ''}}" bindtap="setCueField" data-field="level" data-val="高手">高手</view>
+        </view>
+      </view>
+      <view class="form-group">
+        <view class="form-label">3. 发力方式</view>
+        <view class="opts">
+          <view class="opt {{cueForm.powerType === '轻推发力' ? 'active' : ''}}" bindtap="setCueField" data-field="powerType" data-val="轻推发力">轻推发力</view>
+          <view class="opt {{cueForm.powerType === '均匀发力' ? 'active' : ''}}" bindtap="setCueField" data-field="powerType" data-val="均匀发力">均匀发力</view>
+          <view class="opt {{cueForm.powerType === '大力发力' ? 'active' : ''}}" bindtap="setCueField" data-field="powerType" data-val="大力发力">大力发力</view>
+        </view>
+      </view>
+      <view class="form-group">
+        <view class="form-label">4. 偏好倾向</view>
+        <view class="opts">
+          <view class="opt {{cueForm.likeType === '准度优先' ? 'active' : ''}}" bindtap="setCueField" data-field="likeType" data-val="准度优先">准度优先</view>
+          <view class="opt {{cueForm.likeType === '走位优先' ? 'active' : ''}}" bindtap="setCueField" data-field="likeType" data-val="走位优先">走位优先</view>
+          <view class="opt {{cueForm.likeType === '攻守均衡' ? 'active' : ''}}" bindtap="setCueField" data-field="likeType" data-val="攻守均衡">攻守均衡</view>
+        </view>
+      </view>
+      <view class="form-group">
+        <view class="form-label">5. 预算区间 (¥)</view>
+        <view class="range-inputs">
+          <input class="range-input" type="number" placeholder="最低价" value="{{cueForm.minPrice}}" bindinput="setCueInput" data-field="minPrice" />
+          <text class="range-line">-</text>
+          <input class="range-input" type="number" placeholder="最高价" value="{{cueForm.maxPrice}}" bindinput="setCueInput" data-field="maxPrice" />
+        </view>
+      </view>
+    </block>
+
+    <!-- 皮头推荐：保留旧逻辑（硬度+适配杆型+价格区间） -->
+    <block wx:if="{{recType === 'tip'}}">
+      <view class="form-group">
+        <view class="form-label">硬度</view>
+        <view class="opts">
+          <view class="opt {{tipForm.hardness === '偏软' ? 'active' : ''}}" bindtap="setTipField" data-field="hardness" data-val="偏软">偏软</view>
+          <view class="opt {{tipForm.hardness === '均衡' ? 'active' : ''}}" bindtap="setTipField" data-field="hardness" data-val="均衡">均衡</view>
+          <view class="opt {{tipForm.hardness === '偏硬' ? 'active' : ''}}" bindtap="setTipField" data-field="hardness" data-val="偏硬">偏硬</view>
+        </view>
+      </view>
+      <view class="form-group">
+        <view class="form-label">适配杆型</view>
+        <view class="opts">
+          <view class="opt {{tipForm.tipType === '小头杆' ? 'active' : ''}}" bindtap="setTipField" data-field="tipType" data-val="小头杆">小头杆</view>
+          <view class="opt {{tipForm.tipType === '大头杆' ? 'active' : ''}}" bindtap="setTipField" data-field="tipType" data-val="大头杆">大头杆</view>
+        </view>
+      </view>
+      <view class="form-group">
+        <view class="form-label">价格区间(¥)</view>
+        <view class="range-inputs">
+          <input class="range-input" type="number" placeholder="最低价" value="{{minPrice}}" bindinput="onInput" data-field="minPrice" />
+          <text class="range-line">-</text>
+          <input class="range-input" type="number" placeholder="最高价" value="{{maxPrice}}" bindinput="onInput" data-field="maxPrice" />
+        </view>
+      </view>
+    </block>
+
+    <view class="btn-group">
+      <view class="btn-outline" bindtap="backStep">上一步</view>
+      <view class="btn-primary" bindtap="submit">开始推荐</view>
+    </view>
+  </view>
+
+  <!-- 步骤3: 推荐结果 -->
+  <view class="result-section" wx:if="{{step === 3}}">
+    <view class="result-header">
+      <text class="result-title">{{recType === 'cue' ? '为您精选 ' + resultList.length + ' 支球杆' : '为您推荐 ' + resultList.length + ' 件商品'}}</text>
+      <text class="result-reset" bindtap="resetAll">重新选择</text>
+    </view>
+
+    <view class="result-list">
+      <!-- 球杆推荐结果（显示推荐理由 + 匹配等级）-->
+      <view class="result-card" wx:if="{{recType === 'cue'}}" wx:for="{{resultList}}" wx:key="productId" bindtap="goDetail" data-id="{{item.productId}}">
+        <image class="result-img" src="{{item.mainImg}}" mode="aspectFill" binderror="onImgError" data-url="{{item.mainImg}}" data-index="{{index}}"></image>
+        <view class="result-info">
+          <view class="result-name ellipsis-2">{{item.productName}}</view>
+          <view class="result-tags">
+            <text wx:if="{{item.rodType}}" class="tag tag-green">{{item.rodType}}</text>
+            <text wx:if="{{item.hardness}}" class="tag tag-orange">{{item.hardness}}</text>
+            <text wx:if="{{item.matchLabel}}" class="tag {{item.matchLevel === 1 ? 'tag-blue' : 'tag-gray'}}">{{item.matchLabel}}</text>
+          </view>
+          <view class="result-reason" wx:if="{{item.reason}}">{{item.reason}}</view>
+          <view class="result-bottom">
+            <text class="price"><text class="price-symbol">¥</text>{{item.price}}</text>
+            <view class="match-score">
+              <text class="score-label">匹配度</text>
+              <text class="score-val">{{item.matchScore}}分</text>
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <!-- 皮头推荐结果（显示推荐理由 + 匹配等级）-->
+      <view class="result-card" wx:if="{{recType === 'tip'}}" wx:for="{{resultList}}" wx:key="id" bindtap="goDetail" data-id="{{item.id}}">
+        <image class="result-img" src="{{item.mainImg}}" mode="aspectFill" binderror="onImgError" data-url="{{item.mainImg}}" data-index="{{index}}"></image>
+        <view class="result-info">
+          <view class="result-name ellipsis-2">{{item.name}}</view>
+          <view class="result-tags">
+            <text wx:if="{{item.hardness}}" class="tag tag-orange">{{item.hardness}}</text>
+            <text wx:if="{{item.tipDiameter}}" class="tag tag-gray">{{item.tipDiameter}}mm</text>
+            <text wx:if="{{item.matchLabel}}" class="tag {{item.matchScore >= 90 ? 'tag-blue' : 'tag-gray'}}">{{item.matchLabel}}</text>
+          </view>
+          <view class="result-reason" wx:if="{{item.reason}}">{{item.reason}}</view>
+          <view class="result-bottom">
+            <text class="price"><text class="price-symbol">¥</text>{{item.platformPrice}}</text>
+            <view class="match-score">
+              <text class="score-label">匹配度</text>
+              <text class="score-val">{{item.matchScore}}%</text>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{resultList.length === 0 && !loading}}" class="empty-box">
+      <view class="empty-text">暂未找到匹配商品，您可查看其他</view>
+      <view class="empty-sub">建议调整预算区间或问卷选项后重试</view>
+    </view>
+  </view>
+
+  <view wx:if="{{loading}}" class="loading-more">推荐中...</view>
+</view>

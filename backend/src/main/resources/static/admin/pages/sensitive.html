@@ -1,0 +1,127 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>违规词管理</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css">
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <div class="page-wrap">
+    <div class="page-header">
+      <h4><i class="fa fa-ban text-accent"></i> 违规词管理</h4>
+    </div>
+
+    <!-- 新增 -->
+    <div class="filter-bar">
+      <input type="text" class="form-control" id="newWord" placeholder="输入违规词" style="min-width:200px;">
+      <select class="form-select" id="newCategory" style="min-width:140px;">
+        <option value="政治敏感">政治敏感</option>
+        <option value="低俗">低俗</option>
+        <option value="广告">广告</option>
+        <option value="辱骂">辱骂</option>
+        <option value="其他">其他</option>
+      </select>
+      <button class="btn btn-sm btn-accent" onclick="addWord()"><i class="fa fa-plus"></i> 添加</button>
+      <span class="ms-auto muted fs-13"><i class="fa fa-info-circle"></i> 违规词用于社区内容过滤</span>
+    </div>
+
+    <!-- 筛选 -->
+    <div class="filter-bar">
+      <select class="form-select" id="fCategory" style="min-width:160px;">
+        <option value="">全部分类</option>
+        <option value="政治敏感">政治敏感</option>
+        <option value="低俗">低俗</option>
+        <option value="广告">广告</option>
+        <option value="辱骂">辱骂</option>
+        <option value="其他">其他</option>
+      </select>
+      <button class="btn btn-sm btn-accent" onclick="loadList()"><i class="fa fa-search"></i> 查询</button>
+      <button class="btn btn-sm btn-outline-secondary" onclick="resetFilter()"><i class="fa fa-refresh"></i> 重置</button>
+      <span class="ms-auto muted fs-13">共 <b id="totalCount">0</b> 条</span>
+    </div>
+
+    <div class="table-card">
+      <table class="table table-hover align-middle">
+        <thead>
+          <tr>
+            <th style="width:60px;">ID</th>
+            <th>违规词</th>
+            <th>分类</th>
+            <th>创建时间</th>
+            <th style="width:100px;">操作</th>
+          </tr>
+        </thead>
+        <tbody id="dataBody">
+          <tr><td colspan="5" class="loading"><i class="fa fa-spinner fa-spin"></i> 加载中...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.0/dist/jquery.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="../js/common.js?v=11"></script>
+  <script>
+    // 进入页面时校验登录态，未登录跳转到登录页
+    if (!localStorage.getItem('adminToken')) {
+      location.href = '../login.html';
+    }
+  </script>
+  <script>
+    var CAT_COLORS = { '政治敏感': 'danger', '低俗': 'warning', '广告': 'info', '辱骂': 'dark', '其他': 'secondary' };
+
+    function loadList() {
+      var cat = $('#fCategory').val() || '';
+      $('#dataBody').html('<tr><td colspan="5" class="loading"><i class="fa fa-spinner fa-spin"></i> 加载中...</td></tr>');
+      ajax('/admin/sensitiveWord/list', 'GET', { category: cat }, function (list) {
+        list = list || [];
+        $('#totalCount').text(list.length);
+        var h = '';
+        if (!list.length) {
+          h = '<tr><td colspan="5" class="empty-tip"><i class="fa fa-inbox"></i> 暂无违规词</td></tr>';
+        } else {
+          list.forEach(function (w) {
+            var color = CAT_COLORS[w.category] || 'secondary';
+            h += '<tr>' +
+              '<td>' + w.id + '</td>' +
+              '<td class="fw-semibold"><i class="fa fa-ban text-danger"></i> ' + esc(w.word) + '</td>' +
+              '<td><span class="badge bg-' + color + '">' + esc(w.category || '其他') + '</span></td>' +
+              '<td class="fs-13">' + fmtTime(w.createTime) + '</td>' +
+              '<td><button class="btn btn-sm btn-outline-danger" onclick="delWord(' + w.id + ')"><i class="fa fa-trash"></i> 删除</button></td>' +
+            '</tr>';
+          });
+        }
+        $('#dataBody').html(h);
+      });
+    }
+
+    function resetFilter() { $('#fCategory').val(''); loadList(); }
+
+    function addWord() {
+      var word = $.trim($('#newWord').val());
+      if (!word) { alert('请输入违规词'); return; }
+      var category = $('#newCategory').val();
+      ajax('/admin/sensitiveWord/add', 'POST', { word: word, category: category }, function () {
+        $('#newWord').val('');
+        alert('添加成功');
+        loadList();
+      });
+    }
+
+    function delWord(id) {
+      if (!confirm('确认删除该违规词？')) return;
+      ajax('/admin/sensitiveWord/delete/' + id, 'POST', null, function () {
+        loadList();
+      });
+    }
+
+    $('#newWord').on('keydown', function (e) { if (e.keyCode === 13) addWord(); });
+
+    loadList();
+  </script>
+</body>
+</html>
+

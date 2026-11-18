@@ -1,0 +1,65 @@
+<view class="compare-page">
+  <!-- 筛选区 -->
+  <view class="filter-bar">
+    <picker class="picker" mode="selector" range="{{categoryNames}}" bindchange="onCategoryChange">
+      <view class="picker-text">{{categoryIndex >= 0 ? categoryNames[categoryIndex] : '全部分类'}} ▾</view>
+    </picker>
+    <view class="picker" bindtap="showPriceFilter">
+      <view class="picker-text">价格 ▾</view>
+    </view>
+    <picker class="picker" mode="selector" range="{{sortNames}}" bindchange="onSortChange">
+      <view class="picker-text">{{sortNames[sortIndex]}} ▾</view>
+    </picker>
+  </view>
+
+  <!-- 列表 -->
+  <view class="list">
+    <view class="compare-card" wx:for="{{list}}" wx:key="id" bindtap="goDetail" data-id="{{item.id}}">
+      <image class="compare-img" src="{{item.mainImg}}" mode="aspectFill" lazy-load="true"></image>
+      <view class="compare-info">
+        <view class="compare-name ellipsis-2">{{item.name}}</view>
+        <view class="compare-cat">{{item.categoryName}}</view>
+        <view class="price-compare">
+          <view class="price-item">
+            <text class="price-label">平台价</text>
+            <text class="price price-main"><text class="price-symbol">¥</text>{{item.platformPrice}}</text>
+          </view>
+          <view class="price-item">
+            <text class="price-label">官方价</text>
+            <text class="price-sub">¥{{item.officialPrice}}</text>
+          </view>
+          <view class="price-item">
+            <text class="price-label">拼多多</text>
+            <text class="price-sub">¥{{item.pddPrice}}</text>
+          </view>
+        </view>
+        <view class="save-tag" wx:if="{{item.saveAmount > 0}}">
+          <text class="save-text">省 ¥{{item.saveAmount}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{!loading && list.length === 0}}" class="empty-box">
+    <view class="empty-text">暂无对比数据</view>
+  </view>
+
+  <view wx:if="{{loading}}" class="loading-more">加载中...</view>
+  <view wx:if="{{!loading && list.length > 0 && noMore}}" class="no-more">— 没有更多了 —</view>
+
+  <!-- 价格筛选弹窗 -->
+  <view wx:if="{{priceFilterVisible}}" class="mask" bindtap="hidePriceFilter">
+    <view class="price-panel" catchtap="stopTap">
+      <view class="panel-title">价格区间</view>
+      <view class="price-inputs">
+        <input class="price-input" type="number" placeholder="最低价" value="{{minPrice}}" bindinput="onMinPrice" />
+        <text class="price-line">-</text>
+        <input class="price-input" type="number" placeholder="最高价" value="{{maxPrice}}" bindinput="onMaxPrice" />
+      </view>
+      <view class="panel-btns">
+        <view class="panel-btn reset" bindtap="resetPrice">重置</view>
+        <view class="panel-btn confirm" bindtap="confirmPrice">确定</view>
+      </view>
+    </view>
+  </view>
+</view>

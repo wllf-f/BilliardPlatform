@@ -1,0 +1,27 @@
+<view class="post-create-page">
+  <view class="card">
+    <input class="title-input" placeholder="请输入标题" value="{{title}}" bindinput="onTitleInput" maxlength="50" />
+    <view class="divider"></view>
+    <textarea class="content-input" placeholder="分享你的台球经验、器材心得..." value="{{content}}" bindinput="onContentInput" maxlength="2000" />
+  </view>
+
+  <view class="card">
+    <view class="img-section-title">添加图片（最多9张）</view>
+    <view class="img-grid">
+      <view class="img-item" wx:for="{{images}}" wx:key="*this">
+        <image class="preview-img" src="{{item}}" mode="aspectFill"></image>
+        <view class="del-btn" catchtap="delImg" data-index="{{index}}">×</view>
+      </view>
+      <view wx:if="{{images.length < 9}}" class="add-img-btn" bindtap="chooseImg">
+        <text class="add-icon">+</text>
+        <text class="add-text">添加图片</text>
+      </view>
+    </view>
+  </view>
+
+  <view style="height: 140rpx;"></view>
+
+  <view class="bottom-bar">
+    <view class="submit-btn {{(!title || !content) ? 'disabled' : ''}}" bindtap="submit">发布</view>
+  </view>
+</view>

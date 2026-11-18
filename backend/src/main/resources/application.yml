@@ -1,0 +1,68 @@
+server:
+  port: 8080
+  servlet:
+    encoding:
+      charset: UTF-8
+      force: true
+  tomcat:
+    # 工作线程池：默认200，1万突发下不够用，调大到1000
+    threads:
+      max: 1000
+      min-spare: 100
+    # 等待队列：默认100，太小导致连接直接被拒，调大到1000
+    accept-count: 1000
+    # 最大TCP连接数：默认8192，同步放大
+    max-connections: 10000
+    # 连接超时
+    connection-timeout: 20000
+    max-http-form-post-size: 10MB
+
+spring:
+  profiles:
+    active: dev
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/billiard_db?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: root
+    password: 123456
+    hikari:
+      # 数据库连接池：默认10，1万并发下严重不够，调大到200（MySQL默认max_connections=151，需同步调大）
+      maximum-pool-size: 200
+      minimum-idle: 20
+      connection-timeout: 30000
+      connection-init-sql: SELECT 1
+  redis:
+    host: 127.0.0.1
+    port: 6379
+    database: 0
+    timeout: 5000ms
+    lettuce:
+      pool:
+        # Redis连接池：默认8，调大到64
+        max-active: 64
+        max-idle: 16
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 50MB
+  jackson:
+    default-property-inclusion: non_null
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: Asia/Shanghai
+
+mybatis-plus:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.billiard.entity
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      id-type: auto
+
+# 图片基准地址（可移植性核心配置）：本地默认本地服务，上线改为云存储域名即可
+image:
+  base-url: http://127.0.0.1:8080/billiard_img/
+
+# 上传文件根目录（mvn clean 不会删除此目录）
+upload:
+  dir: ./uploads/billiard_img

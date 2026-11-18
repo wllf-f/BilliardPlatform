@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>商品管理</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css">
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    /* 商品图片上传预览 */
+    .product-upload-area { background:#f8f9fa; border:1px dashed #ced4da; border-radius:6px; padding:10px; }
+    .product-img-item { position:relative; width:72px; height:72px; }
+    .product-img-item img { width:72px; height:72px; object-fit:cover; border-radius:6px; border:1px solid #dee2e6; }
+    .product-img-item .main-tag {
+      position:absolute; left:0; top:0; background:#ff6a00; color:#fff;
+      font-size:10px; padding:1px 4px; border-radius:6px 0 6px 0; line-height:1.2;
+    }
+    /* 分类分组框，用于动态显示/隐藏规格字段 */
+    .spec-group { display:none; }
+    .spec-group.active { display:block; }
+  </style>
+</head>
+<body>
+  <div class="page-wrap">
+    <div class="page-header">
+      <h4><i class="fa fa-cubes text-accent"></i> 商品管理</h4>
+      <div>
+        <button class="btn btn-sm btn-outline-secondary" onclick="openCatModal()"><i class="fa fa-folder-o"></i> 分类/品牌</button>
+        <button class="btn btn-sm btn-outline-accent" onclick="openBatchCategory()"><i class="fa fa-folder-open-o"></i> 批量改分类</button>
+        <button class="btn btn-sm btn-outline-accent" onclick="openBatchPrice()"><i class="fa fa-percent"></i> 批量调价</button>
+        <button class="btn btn-sm btn-accent" onclick="openEdit(null)"><i class="fa fa-plus"></i> 新增商品</button>
+      </div>
+    </div>
+
+    <!-- 筛选 -->
+    <div class="filter-bar">
+      <input type="text" class="form-control" id="fKeyword" placeholder="商品名称/型号关键词" style="min-width:200px;">
+      <select class="form-select" id="fCategory"><option value="">全部分类</option></select>
+      <select class="form-select" id="fStatus">
+        <option value="">全部状态</option>
+        <option value="1">上架</option>
+        <option value="0">下架</option>
+      </select>
+      <button class="btn btn-sm btn-accent" onclick="loadList(1)"><i class="fa fa-search"></i> 查询</button>
+      <button class="btn btn-sm btn-outline-secondary" onclick="resetFilter()"><i class="fa fa-refresh"></i> 重置</button>
+      <span class="ms-auto muted fs-13"><i class="fa fa-info-circle"></i> 选中 <span id="selCount">0</span> 件</span>
+    </div>
+
+    <!-- 列表 -->
+    <div class="table-card">
+      <table class="table table-hover align-middle">
+        <thead>
+          <tr>
+            <th style="width:36px;"><input type="checkbox" id="chkAll"></th>
+            <th style="width:60px;">ID</th>
+            <th style="width:70px;">图片</th>
+            <th>商品名称/型号</th>
+            <th>分类/品牌</th>
+            <th>平台价</th>
+            <th>库存</th>
+            <th>销量</th>
+            <th>状态</th>
+            <th style="width:170px;">操作</th>
+          </tr>
+        </thead>
+        <tbody id="dataBody">
+          <tr><td colspan="10" class="loading"><i class="fa fa-spinner fa-spin"></i> 加载中...</td></tr>
+        </tbody>
+      </table>
+      <div class="pager" id="pager"></div>
+    </div>
+  </div>
+
+  <!-- 新增/编辑商品弹窗 -->
+  <div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="editTitle">新增商品</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form id="editForm">
+            <input type="hidden" id="pId">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label required">商品名称</label>
+                <input type="text" class="form-control" id="pName" required>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">型号</label>
+                <input type="text" class="form-control" id="pModel">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">排序 <small class="text-muted">（数值越小越靠前）</small></label>
+                <input type="number" class="form-control" id="pSort" value="0">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label required">分类</label>
+                <select class="form-select" id="pCategory" required onchange="switchCatAndBrand();"></select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">品牌</label>
+                <select class="form-select" id="pBrand" onchange="switchSpecGroup($('#pCategory').val(), this.options[this.selectedIndex].text);"></select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label required">状态</label>
+                <select class="form-select" id="pStatus">
+                  <option value="1">上架</option>
+                  <option value="0">下架</option>
+                </select>
+              </div>
+
+              <!-- ===== 规格字段：按分类分组显示 ===== -->
+
+              <!-- 球杆 规格（必填：杆头直径/重量/硬度，类型按分类自动锁定） -->
+              <div class="col-12 spec-group spec-cue">
+                <div class="card card-body mb-0" style="padding:14px 16px;border-color:#e3d5f7;background:#faf7ff;">
+                  <h6 class="fw-bold mb-2" style="color:#6f42c1;"><i class="fa fa-hockey-stick"></i> 球杆规格参数</h6>
+                  <!-- 推荐引擎标签（固定枚举下拉，仅后台可见，影响智能推荐匹配，用户端看不到） -->
+                  <div class="card card-body mb-3" style="border-color:#0277bd;background:#e1f5fe;padding:10px 14px;">
+                    <div class="row g-3 align-items-center">
+                      <div class="col-12 mb-1">
+                        <label class="form-label fw-bold mb-0" style="color:#01579b;font-size:15px;">
+                          <i class="fa fa-tags"></i> 推荐引擎标签
+                          <small class="text-muted fw-normal ms-1">（仅后台智能推荐使用，用户端商品详情看不到）</small>
+                        </label>
+                      </div>
+                      <div class="col-md-6">
+                        <label class="form-label" style="color:#01579b;">适配打法 fit_play</label>
+                        <select class="form-select form-select-sm" id="pFitPlay" style="border-color:#0277bd;">
+                          <option value="">请选择</option>
+                          <option value="准度防守">准度防守</option>
+                          <option value="追分走位">追分走位</option>
+                          <option value="均衡打法">均衡打法</option>
+                        </select>
+                      </div>
+                      <div class="col-md-6">
+                        <label class="form-label" style="color:#01579b;">适配发力 fit_power</label>
+                        <select class="form-select form-select-sm" id="pFitPower" style="border-color:#0277bd;">
+                          <option value="">请选择</option>
+                          <option value="轻推发力">轻推发力</option>
+                          <option value="均匀发力">均匀发力</option>
+                          <option value="大力发力">大力发力</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="row g-3">
+                    <div class="col-md-4">
+                      <label class="form-label required">杆头直径 (mm)</label>
+                      <input type="number" step="0.01" class="form-control" id="pTipDiameter" placeholder="如 10.0 / 11.75 / 12.75">
+                    </div>
+                    <div class="col-md-4">
+                      <label class="form-label required">重量 (g)</label>
+                      <input type="number" step="0.01" class="form-control" id="pWeight" placeholder="如 520">
+                    </div>
+                    <div class="col-md-4">
+                      <label class="form-label required">硬度</label>
+                      <select class="form-select" id="pHardness">
+                        <option value="">请选择</option>
+                        <option value="偏软">偏软</option>
+                        <option value="均衡">均衡</option>
+                        <option value="偏硬">偏硬</option>
+                      </select>
+                    </div>
+                    <div class="col-md-4">
+                      <label class="form-label">材质</label>
+                      <input type="text" class="form-control" id="pMaterial" placeholder="如：白蜡木、枫木、碳纤维">
+                    </div>
+                    <div class="col-md-4">
+                      <label class="form-label">规格说明</label>
+                      <input type="text" class="form-control" id="pSpec" placeholder="如：145cm 白铜接口 3/4节">
+                    </div>
+                    <div class="col-md-4">
+                      <label class="form-label">适用场景</label>
+                      <input type="text" class="form-control" id="pApplicableScene" placeholder="如：中式八球、斯诺克、九球">
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 皮头 规格（仅需直径+硬度） -->
+              <div class="col-12 spec-group spec-tip">
+                <div class="card card-body mb-0" style="padding:14px 16px;border-color:#f7d5d5;background:#fff7f7;">
+                  <h6 class="fw-bold mb-2" style="color:#c9302c;"><i class="fa fa-dot-circle-o"></i> 皮头规格参数</h6>
+                  <div class="row g-3">
+                    <div class="col-md-6">
+                      <label class="form-label required">皮头直径 (mm)</label>
+                      <input type="number" step="0.01" class="form-control" id="pTipDiameter" placeholder="如：10 / 10.5 / 11 / 11.75 / 12.75">
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label required">硬度</label>
+                      <select class="form-select" id="pHardness">
+                        <option value="">请选择</option>
+                        <option value="偏软">偏软</option>
+                        <option value="均衡">均衡</option>
+                        <option value="偏硬">偏硬</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 其他类别（不需要额外规格字段，参数在下方"商品参数"键值对中填写） -->
+              <div class="col-12 spec-group spec-other">
+                <div class="card card-body mb-0" style="padding:14px 16px;border-color:#d0d0d0;background:#f5f5f5;">
+                  <h6 class="fw-bold mb-1" style="color:#666;"><i class="fa fa-info-circle"></i> 该类别商品的规格参数</h6>
+                  <small class="text-muted">请在下方「商品参数」区域以键值对形式填写详细规格，如：材质 / 长度 / 重量 / 颜色 / 尺寸 等。</small>
+                </div>
+              </div>
+
+              <div class="col-12">
+                <label class="form-label">商品参数</label>
+                <div class="border rounded p-2" style="background:#f8f9fa;">
+                  <div id="paramsList"></div>
+                  <button type="button" class="btn btn-sm btn-outline-secondary mt-1" onclick="addParamRow()">
+                    <i class="fa fa-plus"></i> 添加参数
+                  </button>
+                </div>
+                <small class="text-muted">添加商品的详细参数，如：长度 145cm、重量 18oz、硬度 M 等</small>
+              </div>
+              <div class="col-12">
+                <label class="form-label required">商品图片</label>
+                <input type="hidden" id="pImgDir">
+                <input type="hidden" id="pMainImg">
+                <input type="hidden" id="pPicCount" value="0">
+                <div class="product-upload-area">
+                  <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <button type="button" class="btn btn-sm btn-outline-accent" onclick="$('#productFileInput').click()">
+                      <i class="fa fa-upload"></i> 上传商品图片
+                    </button>
+                    <input type="file" id="productFileInput" accept="image/*" multiple style="display:none;" onchange="uploadProductImages(this)">
+                    <small class="muted">最多9张，第1张为主图；上传后自动生成图片目录</small>
+                  </div>
+                  <div id="productImgPreview" class="d-flex flex-wrap gap-2 mt-2"></div>
+                  <div class="mt-1"><small class="muted">图片目录：<span id="pImgDirShow" class="text-muted">未设置</span>　图片数量：<span id="pPicCountShow">0</span></small></div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label required">官方价</label>
+                <input type="number" step="0.01" class="form-control" id="pOfficialPrice" required>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">拼多多价</label>
+                <input type="number" step="0.01" class="form-control" id="pPddPrice">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label required">平台价</label>
+                <input type="number" step="0.01" class="form-control" id="pPlatformPrice" required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label required">库存</label>
+                <input type="number" class="form-control" id="pStock" value="0" required>
+              </div>
+              <div class="col-12">
+                <label class="form-label">商品描述</label>
+                <textarea class="form-control" id="pDescription" rows="3"></textarea>
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" data-bs-dismiss="modal">取消</button>
+          <button class="btn btn-accent" onclick="saveProduct()"><i class="fa fa-check"></i> 保存</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 批量改分类 -->
+  <div class="modal fade" id="batchCatModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header"><h5 class="modal-title">批量修改分类</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body">
+          <p class="muted">将选中的 <b id="batchCatCount">0</b> 件商品移动到指定分类：</p>
+          <select class="form-select" id="batchCatSelect"></select>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" data-bs-dismiss="modal">取消</button>
+          <button class="btn btn-accent" onclick="doBatchCategory()">确认修改</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 批量调价 -->
+  <div class="modal fade" id="batchPriceModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header"><h5 class="modal-title">批量调整价格</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body">
+          <p class="muted">对选中的 <b id="batchPriceCount">0</b> 件商品按倍率调整价格。</p>
+          <label class="form-label">价格倍率</label>
+          <input type="number" step="0.01" class="form-control" id="batchRate" value="1.1">
+          <small class="muted">如 1.1 = 涨价10%，0.9 = 降价10%</small>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" data-bs-dismiss="modal">取消</button>
+          <button class="btn btn-accent" onclick="doBatchPrice()">确认调价</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 分类/品牌管理 -->
+  <div class="modal fade" id="catModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header"><h5 class="modal-title">分类与品牌管理</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body">
+          <div class="row">
+            <div class="col-md-6">
+              <h6 class="fw-bold mb-2"><i class="fa fa-folder-o text-accent"></i> 商品分类</h6>
+              <div class="d-flex gap-2 mb-2">
+                <input type="hidden" id="catId">
+                <input type="text" class="form-control form-control-sm" id="catName" placeholder="分类名称">
+                <input type="number" class="form-control form-control-sm" id="catSort" placeholder="排序" style="max-width:80px;" value="0">
+                <select class="form-select form-select-sm" id="catStatus" style="max-width:90px;">
+                  <option value="1">启用</option>
+                  <option value="0">禁用</option>
+                </select>
+                <button class="btn btn-sm btn-accent" onclick="saveCategory()">保存</button>
+              </div>
+              <table class="table table-sm table-bordered">
+                <thead><tr><th>ID</th><th>名称</th><th>排序</th><th>状态</th><th>操作</th></tr></thead>
+                <tbody id="catBody"></tbody>
+              </table>
+            </div>
+            <div class="col-md-6">
+              <h6 class="fw-bold mb-2"><i class="fa fa-tag text-accent"></i> 品牌（按分类筛选）</h6>
+              <div class="d-flex gap-2 mb-2">
+                <input type="hidden" id="brandId">
+                <select class="form-select form-select-sm" id="brandCatSelect" onchange="loadBrandsTable('#brandListBody', this.value)" style="max-width:140px;"></select>
+                <input type="text" class="form-control form-control-sm" id="brandName" placeholder="品牌名称">
+                <input type="number" class="form-control form-control-sm" id="brandSort" placeholder="排序" style="max-width:70px;" value="0">
+                <button class="btn btn-sm btn-accent" onclick="saveBrand()">保存</button>
+              </div>
+              <table class="table table-sm table-bordered">
+                <thead><tr><th>ID</th><th>品牌</th><th>排序</th><th>操作</th></tr></thead>
+                <tbody id="brandListBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.0/dist/jquery.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="../js/common.js?v=11"></script>
+  <script>
+    // 进入页面时校验登录态，未登录跳转到登录页
+    if (!localStorage.getItem('adminToken')) {
+      location.href = '../login.html';
+    }
+  </script>
+  <script>
+    var G = { page: 1, size: 10, total: 0, categories: [], brands: [], selected: {} };
+
+    // 加载分类到指定 select
+    function fillCategorySelect(sel, allOption) {
+      var $s = $(sel);
+      $s.empty();
+      if (allOption) $s.append('<option value="">' + allOption + '</option>');
+      G.categories.forEach(function (c) {
+        $s.append('<option value="' + c.id + '">' + esc(c.name) + '</option>');
+      });
+    }
+
+    // 加载品牌到指定 select，cb 为加载完成回调
+    function loadBrands(sel, categoryId, cb) {
+      var $s = $(sel);
+      $s.empty().append('<option value="">无</option>');
+      ajax('/admin/product/brand?categoryId=' + (categoryId || ''), 'GET', null, function (list) {
+        (list || []).forEach(function (b) {
+          $s.append('<option value="' + b.id + '">' + esc(b.name) + '</option>');
+        });
+        cb && cb();
+      });
+    }
+
+    // 加载品牌到表格（分类管理弹窗内）
+    function loadBrandsTable(sel, categoryId) {
+      ajax('/admin/product/brand?categoryId=' + (categoryId || ''), 'GET', null, function (list) {
+        var h = '';
+        (list || []).forEach(function (b) {
+          h += '<tr><td>' + b.id + '</td><td>' + esc(b.name) + '</td><td>' + (b.sort || 0) + '</td>' +
+               '<td><button class="btn btn-link text-danger btn-sm p-0" onclick="delBrand(' + b.id + ')">删除</button></td></tr>';
+        });
+        if (!h) h = '<tr><td colspan="4" class="muted text-center">暂无品牌</td></tr>';
+        $(sel).html(h);
+      });
+    }
+
+    function loadCategories(cb) {
+      ajax('/admin/product/category', 'GET', null, function (list) {
+        G.categories = list || [];
+        fillCategorySelect('#fCategory', '全部分类');
+        fillCategorySelect('#pCategory', null);
+        fillCategorySelect('#batchCatSelect', null);
+        fillCategorySelect('#brandCatSelect', null);
+        cb && cb();
+      });
+    }
+
+    function buildQuery() {
+      return {
+        page: G.page, size: G.size,
+        keyword: $.trim($('#fKeyword').val()),
+        categoryId: $('#fCategory').val() || '',
+        status: $('#fStatus').val() || ''
+      };
+    }
+
+    function loadList(page) {
+      G.page = page || 1;
+      $('#dataBody').html('<tr><td colspan="10" class="loading"><i class="fa fa-spinner fa-spin"></i> 加载中...</td></tr>');
+      ajax('/admin/product/list', 'GET', buildQuery(), function (res) {
+        G.total = res.total || 0;
+        var records = res.records || [];
+        var h = '';
+        if (!records.length) {
+          h = '<tr><td colspan="10" class="empty-tip"><i class="fa fa-inbox"></i> 暂无商品数据</td></tr>';
+        } else {
+          records.forEach(function (p) {
+            var checked = G.selected[p.id] ? 'checked' : '';
+            var catName = catNameOf(p.categoryId), brandName = brandNameOf(p.brandId);
+            var stBadge = p.status === 1
+              ? '<span class="badge status-on">上架</span>'
+              : '<span class="badge status-off">下架</span>';
+            h += '<tr>' +
+              '<td><input type="checkbox" class="row-chk" data-id="' + p.id + '" ' + checked + '></td>' +
+              '<td>' + p.id + '</td>' +
+              '<td><img class="thumb" src="' + imgUrl(p.imgDir, p.mainImg) + '" onerror="this.onerror=null;this.src=\'' + DEFAULT_PRODUCT_IMG + '\'"></td>' +
+              '<td><div class="fw-semibold">' + esc(p.name) + '</div><div class="muted fs-13">' + esc(p.model || '') + '</div></td>' +
+              '<td><div>' + esc(catName) + '</div><div class="muted fs-13">' + esc(brandName) + '</div></td>' +
+              '<td>' + (p.platformPrice != null ? '¥' + fmtMoney(p.platformPrice) : '<span class="muted">-</span>') + '</td>' +
+              '<td>' + (p.stock || 0) + '</td>' +
+              '<td>' + (p.sales || 0) + '</td>' +
+              '<td>' + stBadge + '</td>' +
+              '<td class="nowrap">' +
+                '<button class="btn btn-sm btn-outline-accent" onclick="openEdit(' + p.id + ')">编辑</button> ' +
+                '<button class="btn btn-sm btn-outline-secondary" onclick="toggleStatus(' + p.id + ',' + (p.status === 1 ? 0 : 1) + ')">' + (p.status === 1 ? '下架' : '上架') + '</button> ' +
+                '<button class="btn btn-sm btn-outline-danger" onclick="delProduct(' + p.id + ')">删除</button>' +
+              '</td></tr>';
+          });
+        }
+        $('#dataBody').html(h);
+        renderPager('#pager', G.page, G.size, G.total, function (p) { loadList(p); });
+        updateSelCount();
+      });
+    }
+
+    function catNameOf(id) {
+      for (var i = 0; i < G.categories.length; i++) if (G.categories[i].id == id) return G.categories[i].name;
+      return '-';
+    }
+    function brandNameOf(id) {
+      // 品牌列表未全局缓存，简单返回 id
+      return id ? ('#' + id) : '-';
+    }
+
+    function resetFilter() {
+      $('#fKeyword').val(''); $('#fCategory').val(''); $('#fStatus').val('');
+      loadList(1);
+    }
+
+    // 全选
+    $('#chkAll').on('change', function () {
+      var c = this.checked;
+      $('.row-chk').each(function () {
+        this.checked = c;
+        G.selected[$(this).data('id')] = c;
+      });
+      updateSelCount();
+    });
+    $(document).on('change', '.row-chk', function () {
+      G.selected[$(this).data('id')] = this.checked;
+      updateSelCount();
+    });
+    function updateSelCount() {
+      var n = 0; for (var k in G.selected) if (G.selected[k]) n++;
+      $('#selCount').text(n);
+    }
+    function getSelectedIds() {
+      var arr = []; for (var k in G.selected) if (G.selected[k]) arr.push(parseInt(k));
+      return arr;
+    }
+
+    // 切换分类：先加载品牌列表，再判断分组
+    function switchCatAndBrand() {
+      var catId = $('#pCategory').val();
+      if (!catId) return;
+      loadBrands('#pBrand', catId, function () {
+        // 品牌加载完后，用当前选中的品牌文字判断分组
+        var bn = $('#pBrand option:selected').text() || '';
+        switchSpecGroup(catId, bn);
+      });
+    }
+
+    // ===== 根据分类ID/名称 或 品牌名 判断分组 =====
+    // 规则：只有分类名含"小头杆/大头杆" → 球杆表单；品牌名含"皮头" → 皮头表单；其余 → 其他
+    function matchSpecGroup(catName, brandName) {
+      var cn = (catName || '');
+      var bn = (brandName || '');
+      // 皮头类（品牌名含"皮头"即可）
+      if (bn.indexOf('皮头') > -1) return 'spec-tip';
+      // 球杆类：只有分类名精确包含"小头杆"或"大头杆"
+      if (cn.indexOf('小头杆') > -1 || cn.indexOf('大头杆') > -1) return 'spec-cue';
+      // 其他（台呢/配件/杆油等）
+      return 'spec-other';
+    }
+    // 切换分组（传入分类ID和当前品牌名）
+    function switchSpecGroup(categoryId, brandName) {
+      var catName = '';
+      for (var i = 0; i < G.categories.length; i++) {
+        if (G.categories[i].id == categoryId) { catName = G.categories[i].name; break; }
+      }
+      var bn = (typeof brandName === 'string') ? brandName :
+        ($('#pBrand option:selected').text() || '');
+      var target = matchSpecGroup(catName, bn);
+      // 先全隐藏
+      $('.spec-group').removeClass('active');
+      // 激活目标
+      $('.' + target).addClass('active');
+      // 禁用非激活组内的元素，启用激活组内的元素
+      $('.spec-group').each(function () {
+        var isActive = $(this).hasClass('active');
+        $(this).find('input, select, textarea').each(function () {
+          this.disabled = !isActive;
+        });
+      });
+      // 球杆类：自动锁定 cueType；其他分组清空残留的 pCueType（避免标签带到非球杆商品）
+      var $hidden = $('#pCueType');
+      if (target === 'spec-cue') {
+        var cueType = '';
+        if (catName.indexOf('小头杆') > -1) cueType = '小头杆';
+        else if (catName.indexOf('大头杆') > -1) cueType = '大头杆';
+        if ($hidden.length) $hidden.val(cueType);
+        else $('form').append('<input type="hidden" id="pCueType" value="' + cueType + '">');
+      } else if ($hidden.length) {
+        $hidden.val('');
+      }
+    }
+    function getActiveVal(id) {
+      var $el = $('.spec-group.active #' + id);
+      if ($el.length) return $el.first().val();
+      // 如果激活组内没有（例如旧数据/无分组），再取全局第一个；但被禁用的（属于非激活分组）值不采集，避免残留标签
+      var $fallback = $('#' + id).first();
+      if ($fallback.length && $fallback.prop('disabled')) return '';
+      return $fallback.val();
+    }
+    // 写入“当前激活组内”指定 id 元素的值
+    function setActiveVal(id, value) {
+      var $el = $('.spec-group.active #' + id);
+      if ($el.length) $el.first().val(value);
+      else $('#' + id).first().val(value);
+    }
+
+    // 品牌内联新增
+    function inlineAddBrand() {
+      var catId = $('#pCategory').val();
+      if (!catId) { alert('请先选择商品分类'); return; }
+      var name = prompt('请输入品牌名称：');
+      if (!name) return;
+      name = $.trim(name);
+      if (!name) { alert('品牌名称不能为空'); return; }
+      ajax('/admin/product/brand/save', 'POST', { name: name, categoryId: parseInt(catId), sort: 0, status: 1 }, function () {
+        // 刷新品牌列表并自动选中新品牌
+        loadBrands('#pBrand', catId, function () {
+          // 尝试选中刚添加的（选最后一个）
+          var lastOpt = $('#pBrand option:last');
+          if (lastOpt.val()) $('#pBrand').val(lastOpt.val());
+        });
+      });
+    }
+
+    // 新增/编辑
+    function openEdit(id) {
+      $('#editForm')[0].reset();
+      $('#pId').val('');
+      $('#editTitle').text('新增商品');
+      fillCategorySelect('#pCategory', null);
+      $('#pBrand').empty().append('<option value="">无</option>');
+      // 先重置图片上传区域
+      resetProductImages();
+      // 重置参数列表
+      $('#paramsList').html('');
+      addParamRow(); // 默认添加一行
+      if (id) {
+        $('#editTitle').text('编辑商品');
+        ajax('/admin/product/detail/' + id, 'GET', null, function (p) {
+          $('#pId').val(p.id);
+          $('#pName').val(p.name);
+          $('#pModel').val(p.model);
+          $('#pSort').val(p.sort || 0);
+          $('#pCategory').val(p.categoryId);
+          loadBrands('#pBrand', p.categoryId, function () {
+            $('#pBrand').val(p.brandId);
+            // 切换分组必须放在 category+brand 之后
+            switchSpecGroup(p.categoryId);
+            // 分组切换完成后，再把规格字段写入当前激活组
+            setActiveVal('pCueType', p.cueType);
+            setActiveVal('pHardness', p.hardness);
+            setActiveVal('pTipDiameter', p.tipDiameter);
+            setActiveVal('pWeight', p.weight);
+            setActiveVal('pMaterial', p.material);
+            setActiveVal('pSpec', p.spec);
+            setActiveVal('pApplicableScene', p.applicableScene);
+            setActiveVal('pFitPlay', p.fitPlay);
+            setActiveVal('pFitPower', p.fitPower);
+          });
+          $('#pStatus').val(p.status);
+          // 从JSON解析参数并显示
+          loadParamsFromJson(p.params);
+          $('#pImgDir').val(p.imgDir);
+          $('#pMainImg').val(p.mainImg || 'pic1.jpg');
+          $('#pPicCount').val(p.picCount || 1);
+          // 预览已有商品图片（按 picN.jpg 规则拼接）
+          renderExistingProductImgs(p.imgDir, p.picCount || 1);
+          $('#pOfficialPrice').val(p.officialPrice);
+          $('#pPddPrice').val(p.pddPrice);
+          $('#pPlatformPrice').val(p.platformPrice);
+          $('#pStock').val(p.stock);
+          $('#pDescription').val(p.description);
+          // 确保弹框出现在所有异步操作完成后再显示
+          setTimeout(function () { new bootstrap.Modal('#editModal').show(); }, 30);
+        });
+      } else {
+        // 新增：默认选第一个分类并切换
+        var firstCat = G.categories && G.categories.length ? G.categories[0].id : '';
+        if (firstCat) $('#pCategory').val(firstCat);
+        switchSpecGroup(firstCat);
+        new bootstrap.Modal('#editModal').show();
+      }
+    }
+
+    // ===== 商品参数管理 =====
+    function addParamRow(key, value) {
+      var row = '<div class="d-flex gap-2 mb-2 param-row">' +
+        '<input type="text" class="form-control form-control-sm param-key" placeholder="参数名" style="max-width:120px;" value="' + (key || '') + '">' +
+        '<input type="text" class="form-control form-control-sm param-value" placeholder="参数值" value="' + (value || '') + '">' +
+        '<button type="button" class="btn btn-sm btn-outline-danger" onclick="removeParamRow(this)"><i class="fa fa-trash"></i></button>' +
+        '</div>';
+      $('#paramsList').append(row);
+    }
+
+    function removeParamRow(btn) {
+      $(btn).closest('.param-row').remove();
+    }
+
+    function getParamsJson() {
+      var params = {};
+      $('#paramsList .param-row').each(function () {
+        var key = $.trim($(this).find('.param-key').val());
+        var value = $.trim($(this).find('.param-value').val());
+        if (key) {
+          params[key] = value;
+        }
+      });
+      return JSON.stringify(params);
+    }
+
+    function loadParamsFromJson(jsonStr) {
+      $('#paramsList').html('');
+      if (!jsonStr) { addParamRow(); return; }
+      try {
+        var obj = JSON.parse(jsonStr);
+        if (typeof obj === 'object' && obj !== null) {
+          var keys = Object.keys(obj);
+          if (keys.length === 0) { addParamRow(); return; }
+          keys.forEach(function (k) { addParamRow(k, obj[k]); });
+        } else {
+          addParamRow();
+        }
+      } catch (e) {
+        addParamRow();
+      }
+    }
+
+    // ===== 商品图片上传 =====
+    function resetProductImages() {
+      $('#pImgDir').val('');
+      $('#pMainImg').val('');
+      $('#pPicCount').val(0);
+      $('#pImgDirShow').text('未设置').addClass('text-muted');
+      $('#pPicCountShow').text(0);
+      $('#productImgPreview').html('');
+      $('#productFileInput').val('');
+    }
+
+    function uploadProductImages(input) {
+      var files = input.files;
+      if (!files || !files.length) return;
+      if (files.length > 9) { alert('最多上传9张商品图片'); input.value = ''; return; }
+      var formData = new FormData();
+      for (var i = 0; i < files.length; i++) {
+        formData.append('files', files[i]);
+      }
+      $.ajax({
+        url: BASE_URL + '/admin/upload/product',
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        headers: { 'token': localStorage.getItem('adminToken') || '' },
+        success: function (res) {
+          if (res.code === 200) {
+            var d = res.data;
+            $('#pImgDir').val(d.imgDir);
+            $('#pMainImg').val(d.mainImg);
+            $('#pPicCount').val(d.picCount);
+            $('#pImgDirShow').text(d.imgDir).removeClass('text-muted');
+            $('#pPicCountShow').text(d.picCount);
+            renderProductImgUrls(d.urls);
+          } else if (res.code === 401) {
+            location.href = '../login.html';
+          } else {
+            alert(res.msg || '上传失败');
+          }
+        },
+        error: function (xhr) {
+          if (xhr.status === 401) location.href = '../login.html';
+          else alert('上传失败：' + (xhr.statusText || '网络错误'));
+        }
+      });
+      // 清空 input 以便重复选择同一文件
+      input.value = '';
+    }
+
+    // 渲染图片预览（urls 为相对路径数组，如 billiard_img/product/xxx/pic1.jpg）
+    function renderProductImgUrls(urls) {
+      var h = '';
+      (urls || []).forEach(function (u, i) {
+        h += '<div class="product-img-item">' +
+             '<img src="' + imgUrl(u) + '" onerror="this.onerror=null;this.src=\'' + DEFAULT_PRODUCT_IMG + '\'">' +
+             (i === 0 ? '<span class="main-tag">主图</span>' : '') +
+             '</div>';
+      });
+      $('#productImgPreview').html(h);
+    }
+
+    // 编辑已有商品时，按 imgDir + picCount 拼接现有图片预览
+    function renderExistingProductImgs(imgDir, picCount) {
+      if (!imgDir || !picCount) {
+        $('#pImgDirShow').text('未设置').addClass('text-muted');
+        $('#pPicCountShow').text(0);
+        $('#productImgPreview').html('');
+        return;
+      }
+      $('#pImgDirShow').text(imgDir).removeClass('text-muted');
+      $('#pPicCountShow').text(picCount);
+      var urls = [];
+      for (var i = 1; i <= picCount; i++) {
+        urls.push('billiard_img/' + imgDir + 'pic' + i + '.jpg');
+      }
+      renderProductImgUrls(urls);
+    }
+
+    function saveProduct() {
+      var name = $.trim($('#pName').val());
+      if (!name) { alert('请输入商品名称'); return; }
+      var catId = $('#pCategory').val();
+      if (!catId) { alert('请选择分类'); return; }
+      // 新增商品时必须上传图片（编辑时若未重新上传则保留原值）
+      var imgDir = $('#pImgDir').val();
+      if (!imgDir) { alert('请上传商品图片'); return; }
+      var id = $('#pId').val();
+      var isEdit = !!id;
+      // 新增时价格必填（后端 add 接口要求）；编辑时可选（后端 update 支持部分更新）
+      if (!isEdit && ($('#pOfficialPrice').val() === '' || $('#pPlatformPrice').val() === '')) {
+        alert('请填写官方价和平台价'); return;
+      }
+      // 获取当前分类名，确定类型
+      var catName = '';
+      for (var i = 0; i < G.categories.length; i++) {
+        if (G.categories[i].id == catId) { catName = G.categories[i].name; break; }
+      }
+      var brandName = $('#pBrand option:selected').text() || '';
+      var groupType = matchSpecGroup(catName, brandName);
+      // 球杆类型：仅球杆类自动锁定（从隐藏字段pCueType读取），其他类强制为空，避免残留标签
+      var isCue = groupType === 'spec-cue';
+      var cueType = isCue ? ($('#pCueType').val() || '') : '';
+      // 从当前激活的规格分组中读取规格值
+      var hardness = getActiveVal('pHardness');
+      var tipDiameter = getActiveVal('pTipDiameter');
+      var weight = getActiveVal('pWeight');
+      var material = getActiveVal('pMaterial');
+      var spec = getActiveVal('pSpec');
+      var applicableScene = getActiveVal('pApplicableScene');
+
+      // 根据分类做必填字段校验
+      if (groupType === 'spec-cue') {
+        if (!tipDiameter) { alert('球杆类商品请填写「杆头直径」'); return; }
+        if (!weight) { alert('球杆类商品请填写「重量」'); return; }
+        if (!hardness) { alert('球杆类商品请选择「硬度」'); return; }
+      } else if (groupType === 'spec-tip') {
+        if (!tipDiameter) { alert('皮头类商品请填写「皮头直径」'); return; }
+        if (!hardness) { alert('皮头类商品请选择「硬度」'); return; }
+      }
+
+      var data = {
+        name: name, model: $('#pModel').val(),
+        categoryId: catId,
+        brandId: parseInt($('#pBrand').val() || 0),
+        status: parseInt($('#pStatus').val()),
+        sort: parseInt($('#pSort').val() || 0),
+        cueType: cueType,
+        hardness: hardness,
+        tipDiameter: tipDiameter,
+        weight: weight,
+        material: material,
+        spec: spec,
+        applicableScene: applicableScene,
+        fitPlay: isCue ? (getActiveVal('pFitPlay') || '') : '',
+        fitPower: isCue ? (getActiveVal('pFitPower') || '') : '',
+        params: getParamsJson(),
+        imgDir: imgDir,
+        mainImg: $('#pMainImg').val() || 'pic1.jpg',
+        picCount: parseInt($('#pPicCount').val() || 1),
+        stock: parseInt($('#pStock').val() || 0),
+        description: $('#pDescription').val(),
+        officialPrice: $('#pOfficialPrice').val() === '' ? null : $('#pOfficialPrice').val(),
+        pddPrice: $('#pPddPrice').val() === '' ? null : $('#pPddPrice').val(),
+        platformPrice: $('#pPlatformPrice').val() === '' ? null : $('#pPlatformPrice').val()
+      };
+      var url;
+      if (isEdit) { data.id = parseInt(id); url = '/admin/product/update'; }
+      else { url = '/admin/product/add'; }
+      ajax(url, 'POST', data, function () {
+        bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
+        alert(isEdit ? '修改成功' : '新增成功');
+        loadList(G.page);
+      });
+    }
+
+    function toggleStatus(id, status) {
+      ajax('/admin/product/status/' + id + '/' + status, 'POST', null, function () {
+        loadList(G.page);
+      });
+    }
+
+    function delProduct(id) {
+      if (!confirm('确认删除该商品？删除后不可恢复。')) return;
+      ajax('/admin/product/delete/' + id, 'POST', null, function () {
+        alert('删除成功'); loadList(G.page);
+      });
+    }
+
+    // 批量改分类
+    function openBatchCategory() {
+      var ids = getSelectedIds();
+      if (!ids.length) { alert('请先勾选要操作的商品'); return; }
+      $('#batchCatCount').text(ids.length);
+      fillCategorySelect('#batchCatSelect', null);
+      new bootstrap.Modal('#batchCatModal').show();
+    }
+    function doBatchCategory() {
+      var cat = $('#batchCatSelect').val();
+      if (!cat) { alert('请选择分类'); return; }
+      ajax('/admin/product/batchCategory', 'POST', { ids: getSelectedIds(), categoryId: parseInt(cat) }, function () {
+        bootstrap.Modal.getInstance(document.getElementById('batchCatModal')).hide();
+        alert('批量修改分类成功');
+        G.selected = {}; loadList(G.page);
+      });
+    }
+
+    // 批量调价
+    function openBatchPrice() {
+      var ids = getSelectedIds();
+      if (!ids.length) { alert('请先勾选要操作的商品'); return; }
+      $('#batchPriceCount').text(ids.length);
+      $('#batchRate').val('1.1');
+      new bootstrap.Modal('#batchPriceModal').show();
+    }
+    function doBatchPrice() {
+      var rate = $('#batchRate').val();
+      if (!rate) { alert('请输入倍率'); return; }
+      ajax('/admin/product/batchPrice', 'POST', { ids: getSelectedIds(), rate: parseFloat(rate) }, function () {
+        bootstrap.Modal.getInstance(document.getElementById('batchPriceModal')).hide();
+        alert('批量调价成功');
+        G.selected = {}; loadList(G.page);
+      });
+    }
+
+    // 分类/品牌管理
+    function openCatModal() {
+      $('#catId').val(''); $('#catName').val(''); $('#catSort').val(0); $('#catStatus').val(1);
+      $('#brandId').val(''); $('#brandName').val(''); $('#brandSort').val(0);
+      loadCategoryTable();
+      if (G.categories.length) { $('#brandCatSelect').val(G.categories[0].id); loadBrandsTable('#brandListBody', G.categories[0].id); }
+      new bootstrap.Modal('#catModal').show();
+    }
+    function loadCategoryTable() {
+      var h = '';
+      G.categories.forEach(function (c) {
+        h += '<tr><td>' + c.id + '</td><td>' + esc(c.name) + '</td><td>' + (c.sort || 0) + '</td>' +
+             '<td>' + (c.status === 1 ? '<span class="badge status-on">启用</span>' : '<span class="badge status-off">禁用</span>') + '</td>' +
+             '<td class="nowrap"><button class="btn btn-link btn-sm p-0" onclick="editCategory(' + c.id + ',\'' + esc(c.name) + '\',' + (c.sort || 0) + ',' + c.status + ')">编辑</button> ' +
+             '<button class="btn btn-link text-danger btn-sm p-0" onclick="delCategory(' + c.id + ')">删除</button></td></tr>';
+      });
+      if (!h) h = '<tr><td colspan="5" class="muted text-center">暂无分类</td></tr>';
+      $('#catBody').html(h);
+    }
+    function editCategory(id, name, sort, status) {
+      $('#catId').val(id); $('#catName').val(name); $('#catSort').val(sort); $('#catStatus').val(status);
+    }
+    function saveCategory() {
+      var name = $.trim($('#catName').val());
+      if (!name) { alert('请输入分类名称'); return; }
+      var data = { name: name, sort: parseInt($('#catSort').val() || 0), status: parseInt($('#catStatus').val()) };
+      if ($('#catId').val()) data.id = parseInt($('#catId').val());
+      ajax('/admin/product/category/save', 'POST', data, function () {
+        alert('保存成功'); $('#catId').val(''); $('#catName').val('');
+        loadCategories(function () { loadCategoryTable(); fillCategorySelect('#brandCatSelect', null); });
+      });
+    }
+    function delCategory(id) {
+      if (!confirm('确认删除该分类？')) return;
+      ajax('/admin/product/category/delete/' + id, 'POST', null, function () {
+        alert('删除成功'); loadCategories(function () { loadCategoryTable(); });
+      });
+    }
+    function saveBrand() {
+      var name = $.trim($('#brandName').val());
+      var cat = $('#brandCatSelect').val();
+      if (!name) { alert('请输入品牌名称'); return; }
+      if (!cat) { alert('请先选择分类'); return; }
+      var data = { categoryId: parseInt(cat), name: name, sort: parseInt($('#brandSort').val() || 0) };
+      if ($('#brandId').val()) data.id = parseInt($('#brandId').val());
+      ajax('/admin/product/brand/save', 'POST', data, function () {
+        alert('保存成功'); $('#brandId').val(''); $('#brandName').val('');
+        loadBrandsTable('#brandListBody', cat);
+      });
+    }
+    function delBrand(id) {
+      if (!confirm('确认删除该品牌？')) return;
+      ajax('/admin/product/brand/delete/' + id, 'POST', null, function () {
+        alert('删除成功'); loadBrandsTable('#brandListBody', $('#brandCatSelect').val());
+      });
+    }
+
+    // 回车查询
+    $('#fKeyword').on('keydown', function (e) { if (e.keyCode === 13) loadList(1); });
+
+    // 初始化
+    loadCategories(function () { loadList(1); });
+  </script>
+</body>
+</html>

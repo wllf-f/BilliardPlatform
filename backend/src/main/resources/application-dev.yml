@@ -1,0 +1,18 @@
+# ================== 开发环境 profile：调试日志、打印 SQL、热部署时用
+logging:
+  level:
+    com.billiard: debug
+
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+# 禁用静态资源缓存，修改前端文件后立即生效
+spring:
+  web:
+    resources:
+      cache:
+        period: 0
+        cachecontrol:
+          max-age: 0
+          must-revalidate: true

@@ -1,0 +1,335 @@
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>内容审核</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css">
+  <link rel="stylesheet" href="../css/style.css?v=6">
+</head>
+<body>
+  <div class="page-wrap">
+    <div class="page-header">
+      <h4><i class="fa fa-comments-o text-accent"></i> 内容审核</h4>
+    </div>
+
+    <!-- 审核模式开关 -->
+    <div class="filter-bar">
+      <span class="fw-semibold"><i class="fa fa-shield text-accent"></i> 审核模式：</span>
+      <label class="switch">
+        <input type="checkbox" id="auditModeSwitch" onchange="toggleAuditMode(this.checked)">
+        <span class="slider"></span>
+      </label>
+      <span id="auditModeText" class="fs-13"></span>
+      <span class="muted fs-13 ms-2">（手动=需人工审核；自动=发布无违规词即通过）</span>
+    </div>
+
+    <div class="filter-bar">
+      <select class="form-select" id="fStatus">
+        <option value="">全部状态</option>
+        <option value="0">待审核</option>
+        <option value="1">已发布</option>
+        <option value="2">已驳回</option>
+        <option value="3">已隐藏</option>
+        <option value="4">已删除</option>
+      </select>
+      <button class="btn btn-sm btn-accent" onclick="loadList(1)"><i class="fa fa-search"></i> 查询</button>
+      <button class="btn btn-sm btn-outline-secondary" onclick="resetFilter()"><i class="fa fa-refresh"></i> 重置</button>
+      <button class="btn btn-sm btn-danger ms-auto" onclick="clearDeleted()"><i class="fa fa-trash"></i> 一键清除已删除内容</button>
+    </div>
+
+    <div class="table-card">
+      <table class="table table-hover align-middle">
+        <thead>
+          <tr>
+            <th style="width:50px;">ID</th>
+            <th style="width:80px;">用户昵称</th>
+            <th style="width:100px;">作者</th>
+            <th>标题/内容</th>
+            <th>图片</th>
+            <th>浏览</th>
+            <th>点赞</th>
+            <th>评论</th>
+            <th>状态</th>
+            <th>发布时间</th>
+            <th style="width:230px;">操作</th>
+          </tr>
+        </thead>
+        <tbody id="dataBody">
+          <tr><td colspan="11" class="loading"><i class="fa fa-spinner fa-spin"></i> 加载中...</td></tr>
+        </tbody>
+      </table>
+      <div class="pager" id="pager"></div>
+    </div>
+  </div>
+
+  <!-- 帖子详情 -->
+  <div class="modal fade" id="detailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">帖子详情</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body" id="detailBody"></div>
+        <div class="modal-footer" id="detailFooter"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 驳回原因 -->
+  <div class="modal fade" id="rejectModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header"><h5 class="modal-title">驳回原因</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body">
+          <label class="form-label required">请输入驳回原因</label>
+          <textarea class="form-control" id="rejectReason" rows="3" placeholder="如：内容包含违规信息"></textarea>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" data-bs-dismiss="modal">取消</button>
+          <button class="btn btn-danger" onclick="confirmReject()">确认驳回</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 评论列表 -->
+  <div class="modal fade" id="commentModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header"><h5 class="modal-title">评论列表</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body" id="commentBody"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.0/dist/jquery.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="../js/common.js?v=11"></script>
+  <script>
+    // 进入页面时校验登录态，未登录跳转到登录页
+    if (!localStorage.getItem('adminToken')) {
+      location.href = '../login.html';
+    }
+  </script>
+  <script>
+    var G = { page: 1, size: 10, total: 0, currentId: null, auditMode: 'manual', records: [] };
+
+    var STATUS_MAP = { 0: '待审核', 1: '已发布', 2: '已驳回', 3: '已隐藏', 4: '已删除' };
+    var STATUS_BADGE = { 0: 'warning', 1: 'success', 2: 'danger', 3: 'secondary', 4: 'dark' };
+
+    function loadList(page) {
+      G.page = page || 1;
+      $('#dataBody').html('<tr><td colspan="11" class="loading"><i class="fa fa-spinner fa-spin"></i> 加载中...</td></tr>');
+      var data = { page: G.page, size: G.size, status: $('#fStatus').val() || '' };
+      ajax('/admin/post/list', 'GET', data, function (res) {
+        G.total = res.total || 0;
+        G.records = res.records || [];
+        var records = G.records;
+        var h = '';
+        if (!records.length) {
+          h = '<tr><td colspan="11" class="empty-tip"><i class="fa fa-inbox"></i> 暂无帖子数据</td></tr>';
+        } else {
+          records.forEach(function (p) {
+            var avatar = '<span class="avatar-wrap" style="width:28px;height:28px;"><i class="fa fa-user-circle" style="font-size:28px;"></i>'
+              + '<img src="' + esc(avatarUrl(p.avatar)) + '" style="width:28px;height:28px;" onerror="this.style.display=\'none\'"></span>';
+            var imgCount = p.images ? p.images.split(',').filter(function (s) { return s; }).length : 0;
+            var content = esc(p.content || '');
+            if (content.length > 40) content = content.substring(0, 40) + '...';
+            var stBadge = '<span class="badge bg-' + (STATUS_BADGE[p.status] || 'secondary') + '">' + (STATUS_MAP[p.status] || '-') + '</span>';
+            if (p.status === 2 && p.rejectReason) {
+              stBadge += '<div class="muted fs-12" title="' + esc(p.rejectReason) + '">原因：' + esc(p.rejectReason).substring(0, 12) + '</div>';
+            }
+            var actions = '';
+            actions += '<button class="btn btn-sm btn-outline-accent" onclick="openDetail(' + p.id + ')">详情</button> ';
+            if (p.status === 0) {
+              actions += '<button class="btn btn-sm btn-outline-success" onclick="auditPass(' + p.id + ')">通过</button> ';
+              actions += '<button class="btn btn-sm btn-outline-danger" onclick="openReject(' + p.id + ')">驳回</button> ';
+            }
+            actions += '<button class="btn btn-sm btn-outline-secondary" onclick="openComments(' + p.id + ')">评论</button> ';
+            if (p.status === 4) {
+              // 已删除（软删除）：提供彻底删除，物理清除该帖及评论/点赞记录
+              actions += '<button class="btn btn-sm btn-danger" onclick="hardDelPost(' + p.id + ')">彻底删除</button>';
+            } else {
+              actions += '<button class="btn btn-sm btn-outline-danger" onclick="delPost(' + p.id + ')">删除</button>';
+            }
+            h += '<tr>' +
+              '<td>' + p.id + '</td>' +
+              '<td>' + esc(p.nickName || '-') + '</td>' +
+              '<td><div class="fs-13">#' + (p.userId || p.id) + '</div>' + avatar + '</td>' +
+              '<td><div class="fw-semibold">' + esc(p.title || '(无标题)') + '</div><div class="muted fs-12">' + content + '</div></td>' +
+              '<td>' + (imgCount ? '<i class="fa fa-image text-accent"></i> ' + imgCount : '-') + '</td>' +
+              '<td>' + (p.viewCount || 0) + '</td>' +
+              '<td>' + (p.likeCount || 0) + '</td>' +
+              '<td>' + (p.commentCount || 0) + '</td>' +
+              '<td>' + stBadge + '</td>' +
+              '<td class="fs-13">' + fmtTime(p.createTime) + '</td>' +
+              '<td class="nowrap">' + actions + '</td>' +
+            '</tr>';
+          });
+        }
+        $('#dataBody').html(h);
+        renderPager('#pager', G.page, G.size, G.total, function (p) { loadList(p); });
+      });
+    }
+
+    function resetFilter() { $('#fStatus').val(''); loadList(1); }
+
+    // 加载审核模式
+    function loadAuditMode() {
+      ajax('/admin/config/list', 'GET', null, function (cfg) {
+        G.auditMode = (cfg && cfg.audit_mode) || 'manual';
+        var isAuto = G.auditMode === 'auto';
+        $('#auditModeSwitch').prop('checked', isAuto);
+        $('#auditModeText').text(isAuto ? '自动审核' : '人工审核')
+          .css('color', isAuto ? '#16a085' : '#e67e22');
+      });
+    }
+    function toggleAuditMode(checked) {
+      var mode = checked ? 'auto' : 'manual';
+      ajax('/admin/config/update', 'POST', { key: 'audit_mode', value: mode }, function () {
+        G.auditMode = mode;
+        $('#auditModeText').text(checked ? '自动审核' : '人工审核')
+          .css('color', checked ? '#16a085' : '#e67e22');
+        alert('审核模式已切换为：' + (checked ? '自动审核' : '人工审核'));
+      });
+    }
+
+    // 详情（从当前列表缓存中查找）
+    function openDetail(id) {
+      G.currentId = id;
+      var p = null;
+      for (var i = 0; i < G.records.length; i++) {
+        if (G.records[i].id == id) { p = G.records[i]; break; }
+      }
+      if (!p) { alert('未找到帖子，请刷新列表后重试'); return; }
+      renderDetail(p);
+    }
+
+    function renderDetail(p) {
+      var imgs = '';
+      if (p.images) {
+        var arr = p.images.split(',').filter(function (s) { return s; });
+        arr.forEach(function (src) {
+          var fullSrc = avatarUrl(src);
+          imgs += '<img src="' + esc(fullSrc) + '" onerror="this.style.display=\'none\'" onclick="window.open(this.src)">';
+        });
+      }
+      var html = '' +
+        '<div class="d-flex align-items-center mb-3">' +
+          '<span class="avatar-wrap" style="width:34px;height:34px;flex-shrink:0;"><i class="fa fa-user-circle" style="font-size:34px;"></i>'
+          + '<img class="rounded-circle" src="' + esc(avatarUrl(p.avatar)) + '" style="width:34px;height:34px;" onerror="this.style.display=\'none\'"></span>' +
+          '<div><div class="fw-semibold">' + esc(p.nickName || '') + '</div>' +
+          '<div class="muted fs-13">' + fmtTime(p.createTime) + '</div></div>' +
+          '<span class="badge bg-' + (STATUS_BADGE[p.status] || 'secondary') + ' ms-3">' + (STATUS_MAP[p.status] || '-') + '</span>' +
+        '</div>' +
+        '<h5 class="fw-bold">' + esc(p.title || '(无标题)') + '</h5>' +
+        '<div class="mb-3" style="white-space:pre-wrap;word-break:break-word;">' + esc(p.content || '') + '</div>';
+      if (imgs) html += '<div class="img-gallery mb-2">' + imgs + '</div>';
+      if (p.status === 2 && p.rejectReason) {
+        html += '<div class="alert alert-danger"><b>驳回原因：</b>' + esc(p.rejectReason) + '</div>';
+      }
+      html += '<div class="muted fs-13"><i class="fa fa-eye"></i> ' + (p.viewCount || 0) +
+        ' &nbsp; <i class="fa fa-thumbs-o-up"></i> ' + (p.likeCount || 0) +
+        ' &nbsp; <i class="fa fa-comment-o"></i> ' + (p.commentCount || 0) + '</div>';
+      $('#detailBody').html(html);
+
+      var footer = '<button class="btn btn-outline-secondary" data-bs-dismiss="modal">关闭</button>';
+      if (p.status === 0) {
+        footer = '<button class="btn btn-outline-success" onclick="auditPass(' + p.id + ')"><i class="fa fa-check"></i> 审核通过</button>' +
+                 '<button class="btn btn-outline-danger" onclick="openReject(' + p.id + ')"><i class="fa fa-times"></i> 驳回</button>' + footer;
+      }
+      footer = '<button class="btn btn-outline-secondary" onclick="openComments(' + p.id + ')"><i class="fa fa-comment-o"></i> 查看评论</button>' + footer;
+      $('#detailFooter').html(footer);
+      new bootstrap.Modal('#detailModal').show();
+    }
+
+    function auditPass(id) {
+      if (!confirm('确认审核通过该帖子？')) return;
+      ajax('/admin/post/audit', 'POST', { id: id, status: 1, reason: '' }, function () {
+        alert('已通过');
+        try { bootstrap.Modal.getInstance(document.getElementById('detailModal')).hide(); } catch (e) {}
+        loadList(G.page);
+      });
+    }
+
+    function openReject(id) {
+      G.currentId = id;
+      $('#rejectReason').val('');
+      new bootstrap.Modal('#rejectModal').show();
+    }
+    function confirmReject() {
+      var reason = $.trim($('#rejectReason').val());
+      if (!reason) { alert('请输入驳回原因'); return; }
+      ajax('/admin/post/audit', 'POST', { id: G.currentId, status: 2, reason: reason }, function () {
+        alert('已驳回');
+        bootstrap.Modal.getInstance(document.getElementById('rejectModal')).hide();
+        try { bootstrap.Modal.getInstance(document.getElementById('detailModal')).hide(); } catch (e) {}
+        loadList(G.page);
+      });
+    }
+
+    function delPost(id) {
+      if (!confirm('确认删除该帖子？删除后不可恢复。')) return;
+      ajax('/admin/post/delete/' + id, 'POST', null, function () {
+        alert('删除成功'); loadList(G.page);
+      });
+    }
+
+    function hardDelPost(id) {
+      if (!confirm('确认彻底删除该帖子？将同时删除其所有评论和点赞记录，数据不可恢复！')) return;
+      ajax('/admin/post/hard-delete/' + id, 'POST', null, function () {
+        alert('已彻底删除'); loadList(G.page);
+      });
+    }
+
+    function clearDeleted() {
+      if (!confirm('确认清除所有已删除的帖子？将永久删除这些帖子及其全部评论和点赞记录，数据不可恢复！')) return;
+      ajax('/admin/post/clear-deleted', 'POST', null, function (n) {
+        alert('已彻底清除 ' + (n || 0) + ' 条已删除的帖子');
+        loadList(1);
+      });
+    }
+
+    // 评论
+    function openComments(postId) {
+      G.currentId = postId;
+      ajax('/admin/post/comment/' + postId, 'GET', null, function (list) {
+        var h = '';
+        if (!list || !list.length) {
+          h = '<div class="empty-tip"><i class="fa fa-comment-o"></i> 暂无评论</div>';
+        } else {
+          list.forEach(function (c) {
+            h += '<div class="d-flex align-items-start mb-3 p-2 border-bottom">' +
+              '<span class="avatar-wrap" style="width:28px;height:28px;flex-shrink:0;"><i class="fa fa-user-circle" style="font-size:28px;"></i>'
+              + '<img class="rounded-circle" src="' + esc(avatarUrl(c.avatar)) + '" style="width:28px;height:28px;" onerror="this.style.display=\'none\'"></span>' +
+              '<div class="flex-grow-1">' +
+                '<div class="fw-semibold">' + esc(c.nickName || '') + ' <span class="muted fw-normal fs-12">#' + c.id + '</span></div>' +
+                '<div>' + esc(c.content || '') + '</div>' +
+                '<div class="muted fs-12">' + fmtTime(c.createTime) + '</div>' +
+              '</div>' +
+              '<button class="btn btn-sm btn-outline-danger" onclick="delComment(' + c.id + ')"><i class="fa fa-trash"></i></button>' +
+            '</div>';
+          });
+        }
+        $('#commentBody').html(h);
+        new bootstrap.Modal('#commentModal').show();
+      });
+    }
+
+    function delComment(id) {
+      if (!confirm('确认删除该评论？')) return;
+      ajax('/admin/post/comment/delete/' + id, 'POST', null, function () {
+        alert('删除成功');
+        openComments(G.currentId);
+      });
+    }
+
+    loadAuditMode();
+    loadList(1);
+  </script>
+</body>
+</html>
+

@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>系统配置</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css">
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <div class="page-wrap">
+    <div class="page-header">
+      <h4><i class="fa fa-cog text-accent"></i> 系统配置</h4>
+      <button class="btn btn-sm btn-outline-accent" onclick="loadConfig()"><i class="fa fa-refresh"></i> 重新加载</button>
+    </div>
+
+    <div class="chart-card" style="max-width:760px;">
+      <div id="loadingTip" class="loading"><i class="fa fa-spinner fa-spin"></i> 加载中...</div>
+      <form id="configForm" style="display:none;">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label required"><i class="fa fa-shield"></i> 审核模式 (audit_mode)</label>
+            <select class="form-select" id="cfg_audit_mode">
+              <option value="manual">manual（人工审核）</option>
+              <option value="auto">auto（自动审核）</option>
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label"><i class="fa fa-money"></i> 定制球杆价格 (custom_cue_price)</label>
+            <input type="number" step="0.01" class="form-control" id="cfg_custom_cue_price">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label"><i class="fa fa-wrench"></i> 改皮头费用 (tip_modify_fee)</label>
+            <input type="number" step="0.01" class="form-control" id="cfg_tip_modify_fee">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label"><i class="fa fa-truck"></i> 改皮头运费 (tip_modify_handfee)</label>
+            <input type="number" step="0.01" class="form-control" id="cfg_tip_modify_handfee">
+          </div>
+          <div class="col-12">
+            <label class="form-label"><i class="fa fa-map-marker"></i> 改皮头服务地址 (tip_modify_address)</label>
+            <textarea class="form-control" id="cfg_tip_modify_address" rows="2"></textarea>
+          </div>
+          <div class="col-12">
+            <label class="form-label"><i class="fa fa-picture-o"></i> 图片资源根地址 (image_base_url)</label>
+            <input type="text" class="form-control" id="cfg_image_base_url">
+          </div>
+          <div class="col-12">
+            <label class="form-label"><i class="fa fa-headphones"></i> 客服联系方式 (customer_service)</label>
+            <textarea class="form-control" id="cfg_customer_service" rows="2" placeholder="如 微信：xxx / 电话：xxx"></textarea>
+          </div>
+          <div class="col-12">
+            <label class="form-label"><i class="fa fa-info-circle"></i> 关于我们 (about_us)</label>
+            <textarea class="form-control" id="cfg_about_us" rows="4"></textarea>
+          </div>
+          <div class="col-12">
+            <button type="button" class="btn btn-accent" onclick="saveAllConfig()"><i class="fa fa-check"></i> 保存全部配置</button>
+            <span class="muted fs-13 ms-2">保存后将逐项提交到后端</span>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.0/dist/jquery.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="../js/common.js?v=11"></script>
+  <script>
+    // 进入页面时校验登录态，未登录跳转到登录页
+    if (!localStorage.getItem('adminToken')) {
+      location.href = '../login.html';
+    }
+  </script>
+  <script>
+    var CFG_KEYS = [
+      'audit_mode', 'custom_cue_price', 'tip_modify_fee', 'tip_modify_handfee',
+      'tip_modify_address', 'image_base_url', 'customer_service', 'about_us'
+    ];
+
+    function loadConfig() {
+      $('#loadingTip').show(); $('#configForm').hide();
+      ajax('/admin/config/list', 'GET', null, function (cfg) {
+        cfg = cfg || {};
+        CFG_KEYS.forEach(function (k) {
+          var $el = $('#cfg_' + k);
+          if ($el.length) $el.val(cfg[k] != null ? cfg[k] : '');
+        });
+        $('#loadingTip').hide();
+        $('#configForm').show();
+      });
+    }
+
+    function saveAllConfig() {
+      var i = 0;
+      function next() {
+        if (i >= CFG_KEYS.length) {
+          alert('全部配置保存成功');
+          return;
+        }
+        var k = CFG_KEYS[i++];
+        var $el = $('#cfg_' + k);
+        if (!$el.length) { next(); return; }
+        var v = $el.val();
+        ajax('/admin/config/update', 'POST', { key: k, value: v }, function () {
+          next();
+        });
+      }
+      next();
+    }
+
+    loadConfig();
+  </script>
+</body>
+</html>
+

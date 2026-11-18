@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>销售统计</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css">
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <div class="page-wrap">
+    <div class="page-header">
+      <h4><i class="fa fa-bar-chart text-accent"></i> 销售统计</h4>
+      <button class="btn btn-sm btn-outline-accent" onclick="loadAll()"><i class="fa fa-refresh"></i> 刷新数据</button>
+    </div>
+
+    <!-- 顶部概览卡片 -->
+    <div class="row g-3 mb-3">
+      <div class="col-md-3">
+        <div class="stat-card">
+          <div class="stat-icon green"><i class="fa fa-cny"></i></div>
+          <div>
+            <div class="stat-val" id="totalSales">0</div>
+            <div class="stat-label">累计销售额（元）</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="stat-card">
+          <div class="stat-icon blue"><i class="fa fa-cny"></i></div>
+          <div>
+            <div class="stat-val" id="thisMonthSales">0</div>
+            <div class="stat-label">本月销售额（元）</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="stat-card">
+          <div class="stat-icon blue"><i class="fa fa-file-text-o"></i></div>
+          <div>
+            <div class="stat-val" id="orderCount">0</div>
+            <div class="stat-label">有效订单（笔）</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="stat-card">
+          <div class="stat-icon orange"><i class="fa fa-users"></i></div>
+          <div>
+            <div class="stat-val" id="userCount">0</div>
+            <div class="stat-label">注册用户（人）</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 近12个月销售趋势 -->
+    <div class="row g-3 mb-3">
+      <div class="col-md-12">
+        <div class="chart-card">
+          <h6><i class="fa fa-line-chart text-accent"></i> 近12个月销售趋势</h6>
+          <div style="height:220px;">
+            <canvas id="trendChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 订单类型占比 + 订单状态分布 -->
+    <div class="row g-3 mb-3">
+      <div class="col-md-6">
+        <div class="chart-card">
+          <h6><i class="fa fa-pie-chart text-accent"></i> 订单类型占比</h6>
+          <div style="max-width:300px; margin:0 auto;">
+            <canvas id="typeChart"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="chart-card">
+          <h6><i class="fa fa-tasks text-accent"></i> 订单状态分布</h6>
+          <div style="max-width:300px; margin:0 auto;">
+            <canvas id="statusChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 销量排行 -->
+    <div class="chart-card mb-3">
+      <h6><i class="fa fa-trophy text-accent"></i> 商品销量排行</h6>
+      <table class="table table-hover align-middle">
+        <thead>
+          <tr>
+            <th style="width:60px;">排名</th>
+            <th style="width:70px;">图片</th>
+            <th>商品名称</th>
+            <th>销量</th>
+            <th>平台价</th>
+            <th>销售额</th>
+          </tr>
+        </thead>
+        <tbody id="rankBody">
+          <tr><td colspan="6" class="loading"><i class="fa fa-spinner fa-spin"></i> 加载中...</td></tr>
+        </tbody>
+      </table>
+      <div id="rankPager" class="d-flex justify-content-center"></div>
+    </div>
+
+    <!-- 订单类型明细 -->
+    <div class="chart-card">
+      <h6><i class="fa fa-list-alt text-accent"></i> 订单类型明细</h6>
+      <table class="table table-sm table-bordered">
+        <thead><tr><th>订单类型</th><th>订单数</th><th>总金额</th></tr></thead>
+        <tbody id="typeTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.0/dist/jquery.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="../js/common.js?v=11"></script>
+  <script>
+    // 进入页面时校验登录态，未登录跳转到登录页
+    if (!localStorage.getItem('adminToken')) {
+      location.href = '../login.html';
+    }
+  </script>
+  <script>
+    var trendChart = null, typeChart = null, statusChart = null;
+    var TYPE_MAP = { 1: '普通订单', 2: '定制订单', 3: '改装订单' };
+    var STATUS_MAP = { 0: '未支付', 1: '待发货', 2: '待收货', 3: '已完成', 4: '已取消' };
+
+    function loadOverview() {
+      ajax('/admin/stats/overview', 'GET', null, function (d) {
+        d = d || {};
+        $('#totalSales').text(fmtMoney(d.totalSales || 0));
+        $('#thisMonthSales').text(fmtMoney(d.thisMonthSales || 0));
+        $('#orderCount').text(d.orderCount || 0);
+        $('#userCount').text(d.userCount || 0);
+      });
+    }
+
+    function loadTrend() {
+      ajax('/admin/stats/monthlyTrend', 'GET', null, function (list) {
+        list = list || [];
+        var labels = list.map(function (i) { return i.month; });
+        var sales = list.map(function (i) { return Number(i.totalAmount || 0); });
+        var counts = list.map(function (i) { return Number(i.orderCount || 0); });
+        var ctx = document.getElementById('trendChart').getContext('2d');
+        if (trendChart) trendChart.destroy();
+        trendChart = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: labels,
+            datasets: [
+              {
+                label: '销售额(元)', data: sales,
+                backgroundColor: 'rgba(22,160,133,0.8)', borderColor: '#16a085',
+                borderRadius: 4, yAxisID: 'y'
+              },
+              {
+                label: '订单数(笔)', data: counts,
+                backgroundColor: 'rgba(52,152,219,0.7)', borderColor: '#3498db',
+                borderRadius: 4, yAxisID: 'y1'
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'top' } },
+            scales: {
+              y: { type: 'linear', position: 'left', title: { display: true, text: '销售额(元)' } },
+              y1: { type: 'linear', position: 'right', title: { display: true, text: '订单数' }, grid: { drawOnChartArea: false } }
+            }
+          }
+        });
+      });
+    }
+
+    var rankPage = 1, rankSize = 10;
+
+    function loadRank(page) {
+      rankPage = page || 1;
+      $('#rankBody').html('<tr><td colspan="6" class="loading"><i class="fa fa-spinner fa-spin"></i> 加载中...</td></tr>');
+      ajax('/admin/stats/salesRank?page=' + rankPage + '&size=' + rankSize, 'GET', null, function (d) {
+        d = d || {};
+        var list = d.list || [];
+        var total = d.total || 0;
+        var h = '';
+        if (!list.length) {
+          h = '<tr><td colspan="6" class="empty-tip"><i class="fa fa-inbox"></i> 暂无销量数据</td></tr>';
+        } else {
+          var medals = ['<i class="fa fa-trophy text-warning"></i>', '<i class="fa fa-trophy text-secondary"></i>', '<i class="fa fa-trophy" style="color:#cd7f32"></i>'];
+          list.forEach(function (p, idx) {
+            var globalRank = (rankPage - 1) * rankSize + idx + 1;
+            var rank = globalRank <= 3 ? medals[globalRank - 1] : globalRank;
+            var imgSrc = p.mainImg || '';
+            h += '<tr>' +
+              '<td class="fw-bold">' + rank + '</td>' +
+              '<td><img class="thumb" src="' + esc(imgSrc) + '" onerror="this.src=\'https://via.placeholder.com/46?text=No\'"></td>' +
+              '<td>' + esc(p.name || '-') + '</td>' +
+              '<td><span class="badge bg-primary">' + (p.sales || 0) + '</span></td>' +
+              '<td>¥' + fmtMoney(p.platformPrice || 0) + '</td>' +
+              '<td>¥' + fmtMoney(p.totalAmount || 0) + '</td>' +
+            '</tr>';
+          });
+        }
+        $('#rankBody').html(h);
+        renderPager('#rankPager', rankPage, rankSize, total, function (p) { loadRank(p); });
+      });
+    }
+
+    function loadTypeStats() {
+      ajax('/admin/stats/countByType', 'GET', null, function (list) {
+        list = list || [];
+        // 表格
+        var h = '';
+        var labels = [], dataCnt = [], colors = ['#16a085', '#3498db', '#e67e22'];
+        list.forEach(function (i) {
+          h += '<tr><td>' + (TYPE_MAP[i.orderType] || ('类型' + i.orderType)) + '</td>' +
+               '<td>' + (i.count || 0) + '</td>' +
+               '<td>¥' + fmtMoney(i.totalAmount || 0) + '</td></tr>';
+          labels.push(TYPE_MAP[i.orderType] || ('类型' + i.orderType));
+          dataCnt.push(Number(i.count || 0));
+        });
+        if (!h) h = '<tr><td colspan="3" class="muted text-center">暂无数据</td></tr>';
+        $('#typeTableBody').html(h);
+        // 饼图
+        var ctx = document.getElementById('typeChart').getContext('2d');
+        if (typeChart) typeChart.destroy();
+        typeChart = new Chart(ctx, {
+          type: 'pie',
+          data: {
+            labels: labels.length ? labels : ['暂无数据'],
+            datasets: [{
+              data: dataCnt.length ? dataCnt : [1],
+              backgroundColor: colors,
+              borderWidth: 2, borderColor: '#fff'
+            }]
+          },
+          options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+        });
+      });
+    }
+
+    function loadStatus() {
+      ajax('/admin/stats/countByStatus', 'GET', null, function (list) {
+        list = list || [];
+        var labels = [], data = [];
+        var colors = ['#95a5a6', '#3498db', '#f39c12', '#16a085', '#e74c3c'];
+        list.forEach(function (i) {
+          labels.push(STATUS_MAP[i.status] || ('状态' + i.status));
+          data.push(Number(i.count || 0));
+        });
+        var ctx = document.getElementById('statusChart').getContext('2d');
+        if (statusChart) statusChart.destroy();
+        statusChart = new Chart(ctx, {
+          type: 'doughnut',
+          data: {
+            labels: labels.length ? labels : ['暂无数据'],
+            datasets: [{
+              data: data.length ? data : [1],
+              backgroundColor: colors,
+              borderWidth: 2, borderColor: '#fff'
+            }]
+          },
+          options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+        });
+      });
+    }
+
+    function loadAll() {
+      loadOverview();
+      loadTrend();
+      loadRank();
+      loadTypeStats();
+      loadStatus();
+    }
+
+    loadAll();
+  </script>
+</body>
+</html>

@@ -1,0 +1,150 @@
+<view class="custom-page">
+  <view class="banner-card">
+    <view class="banner-title">🎱 仁杆定制</view>
+    <view class="banner-desc">专属定制，打造属于您的完美球杆</view>
+    <view class="banner-price">预付定金 ¥{{customPrice}}</view>
+  </view>
+
+  <!-- 打球习惯 -->
+  <view class="section card">
+    <view class="section-title">一、打球习惯</view>
+
+    <view class="form-row">
+      <text class="form-label">打球类型</text>
+      <input class="form-input" placeholder="如：中式八球" value="{{form.playType}}" bindinput="onInput" data-field="playType" />
+    </view>
+    <view class="form-row">
+      <text class="form-label">发力方式</text>
+      <input class="form-input" placeholder="如：大力型/技巧型" value="{{form.powerStyle}}" bindinput="onInput" data-field="powerStyle" />
+    </view>
+    <view class="form-row">
+      <text class="form-label">技术偏好</text>
+      <input class="form-input" placeholder="如：防守型/进攻型" value="{{form.techPref}}" bindinput="onInput" data-field="techPref" />
+    </view>
+    <view class="form-row">
+      <text class="form-label">手感偏好</text>
+      <input class="form-input" placeholder="如：偏硬/偏软" value="{{form.feelChoice}}" bindinput="onInput" data-field="feelChoice" />
+    </view>
+    <view class="form-row textarea-row">
+      <text class="form-label">手感描述</text>
+      <textarea class="form-textarea" placeholder="详细描述您对手感的要求" value="{{form.feelDesc}}" bindinput="onInput" data-field="feelDesc" />
+    </view>
+    <view class="form-row">
+      <text class="form-label">原用球杆</text>
+      <input class="form-input" placeholder="如：健英SC14" value="{{form.oldCue}}" bindinput="onInput" data-field="oldCue" />
+    </view>
+  </view>
+
+  <!-- 物理参数 -->
+  <view class="section card">
+    <view class="section-title">二、物理参数</view>
+
+    <view class="form-row">
+      <text class="form-label">球杆结构</text>
+      <input class="form-input" placeholder="如：分体杆/通杆" value="{{form.cueStructure}}" bindinput="onInput" data-field="cueStructure" />
+    </view>
+    <view class="form-row">
+      <text class="form-label">总长(cm)</text>
+      <input class="form-input" type="digit" placeholder="如：145" value="{{form.totalLength}}" bindinput="onInput" data-field="totalLength" />
+    </view>
+    <view class="form-row">
+      <text class="form-label">总重(oz)</text>
+      <input class="form-input" type="digit" placeholder="如：18.5" value="{{form.totalWeight}}" bindinput="onInput" data-field="totalWeight" />
+    </view>
+    <view class="form-row">
+      <text class="form-label">平衡点</text>
+      <input class="form-input" placeholder="如：距杆尾45cm" value="{{form.balancePoint}}" bindinput="onInput" data-field="balancePoint" />
+    </view>
+    <view class="form-row">
+      <text class="form-label">前节型号</text>
+      <input class="form-input" placeholder="前节型号偏好" value="{{form.frontJointModel}}" bindinput="onInput" data-field="frontJointModel" />
+    </view>
+    <view class="form-row">
+      <text class="form-label">杆头直径(mm)</text>
+      <input class="form-input" type="digit" placeholder="如：12.5" value="{{form.tipDiameter}}" bindinput="onInput" data-field="tipDiameter" />
+    </view>
+    <view class="form-row">
+      <text class="form-label">握把直径(mm)</text>
+      <input class="form-input" type="digit" placeholder="如：29" value="{{form.gripDiameter}}" bindinput="onInput" data-field="gripDiameter" />
+    </view>
+    <view class="form-row">
+      <text class="form-label">锥度要求</text>
+      <input class="form-input" placeholder="锥度要求" value="{{form.taperReq}}" bindinput="onInput" data-field="taperReq" />
+    </view>
+    <view class="form-row">
+      <text class="form-label">皮头材质</text>
+      <input class="form-input" placeholder="如：超皮/猎人" value="{{form.tipMaterial}}" bindinput="onInput" data-field="tipMaterial" />
+    </view>
+    <view class="form-row">
+      <text class="form-label">皮头规格</text>
+      <input class="form-input" placeholder="如：11mm 硬" value="{{form.tipSpec}}" bindinput="onInput" data-field="tipSpec" />
+    </view>
+    <view class="form-row">
+      <text class="form-label">底木材质</text>
+      <input class="form-input" placeholder="如：枫木/白蜡木" value="{{form.baseWood}}" bindinput="onInput" data-field="baseWood" />
+    </view>
+    <view class="form-row">
+      <text class="form-label">握把类型</text>
+      <input class="form-input" placeholder="如：线把/皮把" value="{{form.gripType}}" bindinput="onInput" data-field="gripType" />
+    </view>
+  </view>
+
+  <!-- 外观工艺 -->
+  <view class="section card">
+    <view class="section-title">三、外观工艺</view>
+
+    <view class="form-row">
+      <text class="form-label">镶嵌方案</text>
+      <input class="form-input" placeholder="镶嵌方案要求" value="{{form.insertPlan}}" bindinput="onInput" data-field="insertPlan" />
+    </view>
+    <view class="form-row">
+      <text class="form-label">镶嵌配置</text>
+      <input class="form-input" placeholder="镶嵌配置要求" value="{{form.inlayConfig}}" bindinput="onInput" data-field="inlayConfig" />
+    </view>
+    <view class="form-row">
+      <text class="form-label">油漆要求</text>
+      <input class="form-input" placeholder="如：哑光/亮光" value="{{form.lacquerReq}}" bindinput="onInput" data-field="lacquerReq" />
+    </view>
+    <view class="form-row textarea-row">
+      <text class="form-label">装饰备注</text>
+      <textarea class="form-textarea" placeholder="装饰个性化备注" value="{{form.decorRemark}}" bindinput="onInput" data-field="decorRemark" />
+    </view>
+    <view class="form-row textarea-row">
+      <text class="form-label">木纹条款</text>
+      <textarea class="form-textarea" placeholder="木纹要求说明" value="{{form.grainClause}}" bindinput="onInput" data-field="grainClause" />
+    </view>
+  </view>
+
+  <!-- 约定条款 -->
+  <view class="section card">
+    <view class="section-title">四、约定条款</view>
+
+    <view class="agreement-item">
+      <text class="agreement-label">📦 木材发货</text>
+      <text class="agreement-desc">木材从仓库发货，根据订单顺序安排生产周期约30-60天</text>
+    </view>
+    <view class="agreement-item">
+      <text class="agreement-label">🚫 不退换说明</text>
+      <text class="agreement-desc">定制商品一经确认生产，不支持退换，请确认好订单信息</text>
+    </view>
+    <view class="agreement-item">
+      <text class="agreement-label">⚙️ 参数调整</text>
+      <text class="agreement-desc">生产过程中如需微调参数，请及时联系客服沟通确认</text>
+    </view>
+    <view class="agreement-item">
+      <text class="agreement-label">💰 定金说明</text>
+      <text class="agreement-desc">支付定金后订单生效，尾款发货前结清</text>
+    </view>
+  </view>
+
+  <view style="height: 140rpx;"></view>
+
+  <!-- 底部操作栏 -->
+  <view class="bottom-bar">
+    <view class="bar-contact" bindtap="contactService">
+      <text class="bar-contact-icon">💬</text>
+      <text class="bar-contact-text">联系客服</text>
+    </view>
+    <view class="bar-submit" bindtap="confirmCustom">支付定金 ¥{{customPrice}}</view>
+  </view>
+</view>

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.billiard.mapper.CollectionMapper">
+
+    <select id="selectCollectionPage" resultType="java.util.Map">
+        SELECT col.id AS collectId, col.create_time AS collectTime,
+               p.id AS productId, p.name,
+               CONCAT(#{baseUrl}, p.img_dir, p.main_img) AS mainImg,
+               p.sales, p.stock, p.cue_type AS cueType,
+               pr.platform_price AS platformPrice,
+               pr.official_price AS officialPrice
+        FROM collection col
+        LEFT JOIN product p ON p.id = col.product_id
+        LEFT JOIN product_price pr ON pr.product_id = p.id
+        WHERE col.user_id = #{userId}
+        ORDER BY col.create_time DESC
+    </select>
+</mapper>

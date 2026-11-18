@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>管理后台登录 - 台球器材商城</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="login-wrap">
+    <div class="login-card">
+      <div class="login-logo"><i class="fa fa-tachometer"></i></div>
+      <div class="login-title">台球器材商城</div>
+      <div class="login-sub">管理后台 · Administrator</div>
+
+      <form id="loginForm" autocomplete="off">
+        <div class="mb-3">
+          <label class="form-label">管理员账号</label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="fa fa-user"></i></span>
+            <input type="text" class="form-control" id="username" placeholder="请输入账号" required>
+          </div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">登录密码</label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="fa fa-lock"></i></span>
+            <input type="password" class="form-control" id="password" placeholder="请输入密码" required>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-accent w-100 mt-2" id="loginBtn">
+          <i class="fa fa-sign-in"></i> 登 录
+        </button>
+        <div class="text-center muted fs-13 mt-3">
+          <i class="fa fa-info-circle"></i> 账号密码请联系系统管理员
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.0/dist/jquery.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="js/common.js?v=11"></script>
+  <script>
+    $('#loginForm').on('submit', function (e) {
+      e.preventDefault();
+      var username = $.trim($('#username').val());
+      var password = $.trim($('#password').val());
+      if (!username || !password) { alert('请输入账号和密码'); return; }
+
+      var $btn = $('#loginBtn').prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> 登录中...');
+      $.ajax({
+        url: BASE_URL + '/admin/login',
+        type: 'POST',
+        data: JSON.stringify({ username: username, password: password }),
+        contentType: 'application/json',
+        success: function (res) {
+          $btn.prop('disabled', false).html('<i class="fa fa-sign-in"></i> 登 录');
+          if (res.code === 200) {
+            var d = res.data || {};
+            localStorage.setItem('adminToken', d.token || '');
+            localStorage.setItem('adminInfo', JSON.stringify({
+              adminId: d.adminId, username: d.username, realName: d.realName, avatar: d.avatar
+            }));
+            // 同步写入 Cookie（有效期 7 天），供后端拦截器校验页面访问
+            document.cookie = 'adminToken=' + (d.token || '') + '; path=/admin; max-age=604800';
+            location.href = 'index.html';
+          } else {
+            alert(res.msg || '登录失败');
+          }
+        },
+        error: function () {
+          $btn.prop('disabled', false).html('<i class="fa fa-sign-in"></i> 登 录');
+          alert('登录请求失败，请检查后端服务是否启动');
+        }
+      });
+    });
+  </script>
+</body>
+</html>

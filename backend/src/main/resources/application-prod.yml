@@ -1,0 +1,9 @@
+# ==================== 生产环境 profile：关闭 debug/SQL 日志，级别 INFO，日志落文件
+logging:
+  level:
+    com.billiard: info
+    org.springframework: warn
+
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.nologging.NoLoggingImpl

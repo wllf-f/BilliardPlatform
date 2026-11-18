@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.billiard.mapper.OrdersMapper">
+
+    <!-- 总销售额（仅统计已完成订单） -->
+    <select id="totalSales" resultType="java.lang.Double">
+        SELECT COALESCE(SUM(total_amount), 0) FROM orders
+        WHERE status = 3
+    </select>
+
+    <!-- 有效订单数（仅统计已完成订单） -->
+    <select id="validOrderCount" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM orders
+        WHERE status = 3
+    </select>
+
+    <!-- 本月销售额 -->
+    <select id="thisMonthSales" resultType="java.lang.Double">
+        SELECT COALESCE(SUM(total_amount), 0) FROM orders
+        WHERE status = 3
+          AND DATE_FORMAT(create_time, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')
+    </select>
+
+    <!-- 月度销售趋势（近12个月） -->
+    <select id="monthlyTrend" resultType="java.util.Map">
+        SELECT DATE_FORMAT(create_time, '%Y-%m') AS month,
+               COUNT(*) AS orderCount,
+               COALESCE(SUM(total_amount), 0) AS totalAmount
+        FROM orders
+        WHERE status = 3
+          AND create_time &gt;= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
+        GROUP BY month
+        ORDER BY month
+    </select>
+
+    <!-- 年度销售汇总（按年） -->
+    <select id="yearlySummary" resultType="java.util.Map">
+        SELECT DATE_FORMAT(create_time, '%Y') AS year,
+               COUNT(*) AS orderCount,
+               COALESCE(SUM(total_amount), 0) AS totalAmount
+        FROM orders
+        WHERE status = 3
+        GROUP BY year
+        ORDER BY year
+    </select>
+
+    <!-- 各订单状态分布 -->
+    <select id="countByStatus" resultType="java.util.Map">
+        SELECT status,
+               COUNT(*) AS count,
+               COALESCE(SUM(total_amount), 0) AS totalAmount
+        FROM orders
+        GROUP BY status
+        ORDER BY status
+    </select>
+
+    <!-- 商品销量排行榜总数（仅统计已完成订单，按商品去重） -->
+    <select id="salesRankCount" resultType="java.lang.Long">
+        SELECT COUNT(DISTINCT oi.product_id)
+        FROM order_item oi
+        JOIN orders o ON o.id = oi.order_id
+        WHERE o.status = 3
+          AND oi.product_id IS NOT NULL
+    </select>
+
+    <!-- 商品销量排行榜分页（仅统计已完成订单，按销售额从大到小排序） -->
+    <select id="salesRankPage" resultType="java.util.Map">
+        SELECT p.id,
+               p.name,
+               CONCAT(#{baseUrl}, p.img_dir, p.main_img) AS mainImg,
+               pr.platform_price AS platformPrice,
+               SUM(oi.quantity) AS sales,
+               SUM(oi.subtotal) AS totalAmount
+        FROM order_item oi
+        JOIN orders o ON o.id = oi.order_id
+        JOIN product p ON p.id = oi.product_id
+        LEFT JOIN product_price pr ON pr.product_id = p.id
+        WHERE o.status = 3
+          AND oi.product_id IS NOT NULL
+        GROUP BY p.id, p.name, p.img_dir, p.main_img, pr.platform_price
+        ORDER BY totalAmount DESC
+        LIMIT #{offset}, #{size}
+    </select>
+
+    <!-- 各订单类型统计（仅统计已完成订单） -->
+    <select id="countByType" resultType="java.util.Map">
+        SELECT order_type AS orderType,
+               COUNT(*) AS count,
+               COALESCE(SUM(total_amount), 0) AS totalAmount
+        FROM orders
+        WHERE status = 3
+        GROUP BY order_type
+    </select>
+</mapper>
